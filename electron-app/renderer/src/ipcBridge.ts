@@ -16,6 +16,12 @@ export function openExternal(url: string): void {
   window.electronAPI.openExternal(url);
 }
 
+export function onLogMessage(callback: (log: { type: 'info' | 'error' | 'warning'; message: string }) => void): void {
+  if (window.electronAPI?.onLogMessage) {
+    window.electronAPI.onLogMessage(callback);
+  }
+}
+
 export function hideSettings(): void {
   window.electronAPI.hideSettings();
 }

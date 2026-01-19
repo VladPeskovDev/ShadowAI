@@ -22,9 +22,10 @@ declare global {
         telegramBotToken?: string;
         telegramChatId?: string;
         sendScreenshotsToTelegram?: boolean;
+
       }>;
       listAudioDevices: () => Promise<string[]>;
-      onLogMessage: (callback: (log: { type: string; message: string }) => void) => void;
+      onLogMessage: (callback: (log: { type: 'info' | 'error' | 'warning'; message: string }) => void) => void;
       sendLog: (log: { type: string; message: string }) => void;
       openExternal: (url: string) => void;
       hideSettings: () => void;
@@ -36,6 +37,7 @@ declare global {
       onCommand?: (callback: (cmd: string) => void) => void;
       resizeOverlay: (width: number, height: number) => Promise<void>;
     };
+
   }
 }
 
@@ -48,4 +50,5 @@ export type AppSettings = {
   telegramBotToken?: string;
   telegramChatId?: string;
   sendScreenshotsToTelegram?: boolean;
+
 };

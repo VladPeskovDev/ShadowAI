@@ -5,7 +5,7 @@ const { shell } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings) => ipcRenderer.send('save-settings', settings),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
-  onLogMessage: (callback) => ipcRenderer.on('log-from-main', (_, data) => callback(data)),
+  onLogMessage: (callback) => ipcRenderer.on('log-from-main', (_, log) => callback(log)),
   sendLog: (log) => ipcRenderer.send('log-message', log),
   quitApp: () => ipcRenderer.send('quit-app'),
   listAudioDevices: () => ipcRenderer.invoke('list-audio-devices'),

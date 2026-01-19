@@ -27,14 +27,14 @@ async function sendScreenshot() {
     const telegramChatId = getTelegramChatId();
     
     const telegramPromise = (sendToTelegram && telegramToken && telegramChatId) 
-      ? sendToTelegramAsync(buffer, telegramToken, telegramChatId, timer) // <- оригинал
+      ? sendToTelegramAsync(buffer, telegramToken, telegramChatId, timer) 
       : Promise.resolve();
 
-    // OCR (параллельно с Telegram) - используем ОПТИМИЗИРОВАННЫЙ
+    // OCR (параллельно с Telegram) 
     timer.mark('Начало OCR');
     const [_, ocrText] = await Promise.all([
       telegramPromise,
-      recognizeTextFromBuffer(optimizedBuffer) // <- оптимизированный
+      recognizeTextFromBuffer(optimizedBuffer) 
     ]);
     
     timer.mark('OCR завершен');
@@ -49,7 +49,7 @@ async function sendScreenshot() {
         type: 'warning',
         message: 'Tesseract не распознал текст на скриншоте',
       });
-      sendOverlayText('⚠️ Текст на скриншоте не распознан', false);
+      sendOverlayText('Текст на скриншоте не распознан', false);
       timer.end();
       return;
     }
@@ -93,7 +93,7 @@ async function sendScreenshot() {
     
     timer.end();
   } catch (error) {
-    console.error('❌ Ошибка при отправке скриншота:', error.message);
+    console.error('Ошибка при отправке скриншота:', error.message);
     
     ipcMain.emit('log-message', null, {
       type: 'error',
