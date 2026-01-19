@@ -1,0 +1,80 @@
+/* Layout.css */
+
+body, html, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.title-bar {
+  -webkit-app-region: drag;
+  height: 28px;
+  background: #e0e0e0;
+}
+
+.title-bar * {
+  -webkit-app-region: no-drag;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+
+  background-image: url('/photo.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.content {
+  padding: 20px;
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.button {
+  display: inline-block;
+  background: #007aff;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  transition: background 0.2s ease;
+  margin-top: 8px;
+}
+
+.button:hover {
+  background: #005bbb;
+}
+
+.exit-btn {
+  background: #ff3b30;
+}
+
+.exit-btn:hover {
+  background: #d32f2f;
+}

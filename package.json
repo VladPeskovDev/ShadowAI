@@ -1,0 +1,69 @@
+{
+  "name": "hack-sobes",
+  "version": "2.0.0",
+  "description": "AI Desktop Assistant with direct OpenAI API integration",
+  "main": "electron-app/main.js",
+  "scripts": {
+    "dev": "concurrently -k -s first -n VITE,ELECTRON \"npm run dev:renderer\" \"npm run wait-and-electron\"",
+    "dev:renderer": "cd electron-app/renderer && npm run dev",
+    "wait-and-electron": "npx wait-port localhost:5173 && npm run electron-dev",
+    "electron-dev": "electron ./electron-app/main.js",
+    "build:renderer": "cd electron-app/renderer && npm run build",
+    "start": "electron ./electron-app/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "array.prototype.findindex": "^2.2.4",
+    "axios": "^1.8.3",
+    "call-bind": "^1.0.8",
+    "call-bind-apply-helpers": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "dunder-proto": "^1.0.1",
+    "ffmpeg-static": "^5.2.0",
+    "get-intrinsic": "^1.2.7",
+    "node-fetch": "^3.3.2",
+    "node-record-lpcm16": "^1.0.1",
+    "openai": "^4.73.0",
+    "react-router-dom": "^6.30.0",
+    "screenshot-desktop": "^1.15.1",
+    "set-function-length": "^1.2.2",
+    "tesseract.js": "^6.0.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "concurrently": "^9.1.2",
+    "electron": "^34.5.4",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.8.2",
+    "wait-on": "^8.0.3",
+    "wait-port": "^1.1.0"
+  },
+  "build": {
+    "appId": "ru.tgqueue.hacksobes",
+    "productName": "HackSobes",
+    "mac": {
+      "sign": false,
+      "identity": null,
+      "hardenedRuntime": false,
+      "icon": "electron-app/icon/icon.icns",
+      "target": [
+        {
+          "target": "dmg"
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": "1",
+        "NSMicrophoneUsageDescription": "Приложению требуется доступ к микрофону для записи аудио."
+      },
+      "category": "public.app-category.utilities"
+    },
+    "asarUnpack": [
+      "**/node_modules/ffmpeg-static/**",
+      "**/node_modules/tesseract.js-core/**"
+    ]
+  }
+}

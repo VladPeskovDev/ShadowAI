@@ -1,0 +1,114 @@
+.profileWrapper {
+  max-width: 500px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* Прозрачный контейнер "стекло" */
+.profileContainer {
+  width: 100%;
+  padding: 24px 24px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: rgba(15, 28, 54, 0.43); /* тёмная дымка + прозрачность */
+  border-radius: 18px;
+  box-shadow: 0 2px 12px rgba(20,30,60,0.10);
+  text-align: left;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Светлый текст с тенью для читаемости */
+.profileContainer,
+.profileBlock,
+.profileBlock > div,
+.profileBlock > ul,
+.profileBlock ul li {
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+}
+
+.profileBlock {
+  background: none;
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.profileBlock ul {
+  list-style: disc inside;
+  padding-left: 14px;
+  margin: 6px 0 0 0;
+  color: #fff;
+  font-size: 16px;
+}
+
+.profileBlock > div {
+  margin-bottom: 8px;
+}
+
+.profileLoading, .profileError {
+  text-align: center;
+  margin: 50px 0;
+  color: #eee;
+  font-size: 18px;
+  text-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+
+.profileTitle {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 12px;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+}
+
+/* Кнопки — вне контейнера, под ним! */
+.profileButtons {
+  width: 100%;
+  max-width: 500px;
+  margin: 28px auto 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  background: none;
+}
+
+.changeAccountBtn,
+.button {
+  background: #007aff;
+  color: #fff;
+  border: none;
+  padding: 12px 0;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0;
+  transition: background 0.2s;
+  opacity: 0.90;
+}
+
+.changeAccountBtn:hover,
+.button:hover {
+  background: #005bbb;
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  .profileWrapper, .profileContainer, .profileButtons {
+    max-width: 98vw;
+    padding: 8px 4px;
+  }
+  .profileContainer {
+    padding: 12px 4px 8px 4px;
+  }
+}

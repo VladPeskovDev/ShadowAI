@@ -1,0 +1,16 @@
+[package]
+name = "native"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = "2"
+napi-derive = "2"
+image = "0.24"
+fast_image_resize = "3.0"
+
+[build-dependencies]
+napi-build = "2"

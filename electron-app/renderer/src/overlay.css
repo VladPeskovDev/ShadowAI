@@ -1,0 +1,136 @@
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(20, 20, 20, 0.85);
+  color: #ffffff;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  opacity: 0.95;
+  overflow: auto;
+}
+
+.overlay-container {
+  width: 100%;
+  height: 100%;
+  padding: 12px 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  text-align: left;
+  line-height: 1.5;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+.overlay-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overlay-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+pre {
+  background: rgba(40, 40, 40, 0.9);
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #ffffff;
+  white-space: pre;
+  display: block;
+}
+
+pre code {
+  max-height: 250px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.overlay-container p {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.nav-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.nav-buttons button {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  background-color: #444;
+  color: white;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.nav-buttons button:hover {
+  background-color: #666;
+  opacity: 1;
+}
+
+.nav-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.code-block {
+  position: relative;
+  margin: 8px 0;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #444;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.copy-btn:hover {
+  background: #666;
+}
+
+.streaming-indicator {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 200, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

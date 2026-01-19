@@ -1,0 +1,137 @@
+.authContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-image: url('/photo.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+  width: 100vw;
+  padding: 60px 20px;
+  box-sizing: border-box;
+  gap: 20px;
+  text-align: center;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+.input {
+  padding: 10px;
+  font-size: 16px;
+  width: 260px;           /* Базовая ширина */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-sizing: border-box;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 260px;           /* Совпадает с .input */
+}
+
+.button {
+  background-color: #007aff;
+  color: white;
+  padding: 12px 0;        /* Убрал горизонтальный паддинг */
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;            /* Берёт ширину у .buttonGroup */
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.button:hover {
+  background-color: #005bbb;
+}
+
+.secondary {
+  font-size: 13px;        /* Чуть меньше шрифт, чем у основной */
+  background-color: #007aff;
+  color: #fff;
+  opacity: 0.92;
+}
+
+.secondary:hover {
+  background-color: #339bff;
+  opacity: 1;
+}
+
+.link {
+  color: #ffffff;
+  font-size: 14px;
+  text-decoration: underline;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.error {
+  color: #ffdddd;
+  font-size: 14px;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Стили для второй кнопки (меньше шрифт, тот же фон, синий) --- */
+.secondary {
+  font-size: 15px;                /* меньше шрифт */
+  background-color: #007aff;       /* тот же синий */
+  color: #fff;                     /* белый текст */
+  opacity: 0.92;                   /* визуально чуть менее яркая */
+}
+
+.secondary:hover {
+  background-color: #339bff;      /* чуть светлее при ховере */
+  opacity: 1;
+}
+
+.spinnerWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Сам спиннер */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-top: 3px solid #007aff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.exitBtn {
+  background: #fff;
+  color: #007aff;
+  border: 1px solid #007aff;
+  font-size: 15px;
+  margin-top: 10px;
+  opacity: 0.95;
+  transition: background 0.2s, color 0.2s;
+}
+
+.exitBtn:hover {
+  background: #f4f9ff;
+  color: #005bbb;
+  opacity: 1;
+}
+

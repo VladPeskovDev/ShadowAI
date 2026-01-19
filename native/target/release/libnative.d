@@ -1,0 +1,1 @@
+/Users/vladislav/Desktop/ShadowAI/screenshotBot/native/target/release/libnative.dylib: /Users/vladislav/Desktop/ShadowAI/screenshotBot/native/build.rs /Users/vladislav/Desktop/ShadowAI/screenshotBot/native/src/lib.rs
