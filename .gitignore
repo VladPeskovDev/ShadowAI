@@ -138,3 +138,5 @@ dist
 # игнорировать приватные модули
 /electron-app/internal/
 /electron-app/bin/
+/native/target/native/**/*.node
+native/target/
