@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const { shell } = require('electron');
 
-// Экспонируем API для сохранения/загрузки настроек и логов
+//API для сохранения/загрузки настроек и логов
 contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings) => ipcRenderer.send('save-settings', settings),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
