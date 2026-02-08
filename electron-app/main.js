@@ -1,15 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { sendScreenshot } = require("./modules/screenshot");
-const { startRecording, stopRecording } = require("./modules/recorder");
-const { setOpenAiApiKey, setAudioPrompt, setScreenshotPrompt,
-  getOpenAiApiKey, getAudioPrompt, getScreenshotPrompt,
+const { sendScreenshot  } = require("./modules/screenshot");
+const { startRecording, stopRecording, clearConversationHistory } = require("./modules/recorder");
+const { setOpenAiApiKey, setAudioPrompt, setScreenshotPrompt, getOpenAiApiKey, getAudioPrompt, getScreenshotPrompt,
   getOverlayEffectEnabled, setOverlayEffectEnabled,
   getMicrophoneIndex, setMicrophoneIndex,
   getTelegramBotToken, setTelegramBotToken,
   getTelegramChatId, setTelegramChatId,
-  getSendScreenshotsToTelegram, setSendScreenshotsToTelegram 
+  getSendScreenshotsToTelegram, setSendScreenshotsToTelegram, getScreenshotInterval, setScreenshotInterval,  
 } = require("./modules/telegram");
 const { spawnSync } = require("child_process");
 const { createOverlayWindow, toggleOverlayWindow, getOverlayWindow } = require("./core/windows/overlay");
@@ -45,9 +44,11 @@ app.dock && app.dock.hide();
 
 // Сохранение настроек
 ipcMain.on("save-settings", (event, settings) => {
-  const { openaiApiKey, audioPrompt, screenshotPrompt,
+  const { 
+    openaiApiKey, audioPrompt, screenshotPrompt,
     overlayEffectEnabled: overlayEnabled, microphoneIndex,
-    telegramBotToken, telegramChatId, sendScreenshotsToTelegram  
+    telegramBotToken, telegramChatId, sendScreenshotsToTelegram,
+    screenshotInterval  
   } = settings;
 
   if (openaiApiKey) setOpenAiApiKey(openaiApiKey);
@@ -60,7 +61,8 @@ ipcMain.on("save-settings", (event, settings) => {
   if (microphoneIndex) setMicrophoneIndex(microphoneIndex);
   if (telegramBotToken !== undefined) setTelegramBotToken(telegramBotToken);
   if (telegramChatId !== undefined) setTelegramChatId(telegramChatId);
-  if (typeof sendScreenshotsToTelegram === "boolean") setSendScreenshotsToTelegram(sendScreenshotsToTelegram);  
+  if (typeof sendScreenshotsToTelegram === "boolean") setSendScreenshotsToTelegram(sendScreenshotsToTelegram);
+  if (screenshotInterval !== undefined) setScreenshotInterval(screenshotInterval);  
 });
 
 // Загрузка настроек
@@ -73,6 +75,7 @@ ipcMain.handle("load-settings", () => ({
   telegramBotToken: getTelegramBotToken(),
   telegramChatId: getTelegramChatId(),
   sendScreenshotsToTelegram: getSendScreenshotsToTelegram(), 
+   screenshotInterval: getScreenshotInterval(),
 }));
 
 // Отправка текста в оверлей
@@ -134,6 +137,15 @@ ipcMain.handle("list-audio-devices", () => {
 ipcMain.handle('open-external', async (_event, url) => {
   const { shell } = require('electron');
   await shell.openExternal(url);
+});
+
+// Очистка контекста диалога
+ipcMain.on('clear-context', () => {
+  clearConversationHistory();
+  ipcMain.emit('log-message', null, {
+    type: 'info',
+    message: 'Контекст диалога очищен',
+  });
 });
 
 // Завершение приложения

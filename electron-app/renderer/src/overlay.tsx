@@ -29,12 +29,12 @@ const Overlay: React.FC = () => {
     const bridge = window.overlayBridge;
     
     if (!bridge) {
-      console.error('❌ overlayBridge не найден!');
+      console.error('overlayBridge не найден!');
       return;
     }
 
     bridge.onUpdateText((data: { text: string; isStreaming: boolean }) => {
-      //console.log('📩 Получено в overlay:', data);
+      //console.log('Получено в overlay:', data);
       
       const { text, isStreaming: streaming } = data;
       

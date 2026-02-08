@@ -29,3 +29,7 @@ export function hideSettings(): void {
 export function quitApp(): void {
   window.electronAPI.quitApp();
 }
+
+export function clearContext(): void {
+  window.electronAPI.clearContext();
+}

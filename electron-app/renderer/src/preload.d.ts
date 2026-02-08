@@ -12,6 +12,7 @@ declare global {
         telegramBotToken?: string;
         telegramChatId?: string;
         sendScreenshotsToTelegram?: boolean;
+        screenshotInterval?: number; 
       }) => void;
       loadSettings: () => Promise<{
         openaiApiKey: string;
@@ -22,7 +23,7 @@ declare global {
         telegramBotToken?: string;
         telegramChatId?: string;
         sendScreenshotsToTelegram?: boolean;
-
+        screenshotInterval?: number; 
       }>;
       listAudioDevices: () => Promise<string[]>;
       onLogMessage: (callback: (log: { type: 'info' | 'error' | 'warning'; message: string }) => void) => void;
@@ -30,6 +31,7 @@ declare global {
       openExternal: (url: string) => void;
       hideSettings: () => void;
       quitApp: () => void;
+      clearContext: () => void;
     };
 
     overlayBridge?: {
@@ -50,5 +52,6 @@ export type AppSettings = {
   telegramBotToken?: string;
   telegramChatId?: string;
   sendScreenshotsToTelegram?: boolean;
+  screenshotInterval?: number;
 
 };

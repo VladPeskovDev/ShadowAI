@@ -9,6 +9,10 @@ const FormData = require('form-data');
 const { Timer } = require('../utils/timer');
 const { optimizeForOcr } = require('../../native');
 
+// Периодические скриншоты
+let periodicInterval = null;
+let periodicIntervalSeconds = 3; 
+
 async function sendScreenshot() {
   const timer = new Timer('СКРИНШОТ');
   
@@ -111,7 +115,7 @@ async function sendToTelegramAsync(buffer, token, chatId, timer) {
     const formData = new FormData();
     formData.append('chat_id', chatId);
     formData.append('photo', buffer, { filename: 'screenshot.png' });
-    formData.append('caption', '📸 Скриншот');
+    formData.append('caption', 'Скриншот');
 
     await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, formData, {
       headers: formData.getHeaders(),
@@ -123,7 +127,74 @@ async function sendToTelegramAsync(buffer, token, chatId, timer) {
   }
 }
 
-module.exports = { sendScreenshot };
+
+ // Запуск периодических скриншотов (только в Telegram)
+ 
+function startPeriodicScreenshots(intervalSeconds) {
+  if (periodicInterval) {
+    stopPeriodicScreenshots();
+  }
+  
+  periodicIntervalSeconds = intervalSeconds || 20;
+  
+  console.log(`📸 Запуск периодических скриншотов каждые ${periodicIntervalSeconds}s`);
+  
+  ipcMain.emit('log-message', null, {
+    type: 'info',
+    message: `Периодические скриншоты запущены (каждые ${periodicIntervalSeconds}s)`,
+  });
+  
+  periodicInterval = setInterval(async () => {
+    try {
+      const sendToTelegram = getSendScreenshotsToTelegram();
+      const telegramToken = getTelegramBotToken();
+      const telegramChatId = getTelegramChatId();
+      
+      
+      const buffer = await screenshot({ format: 'png' });
+      const timer = new Timer('ПЕРИОДИЧЕСКИЙ СКРИНШОТ');
+      
+      await sendToTelegramAsync(buffer, telegramToken, telegramChatId, timer);
+      
+      timer.end();
+      
+      console.log('Периодический скриншот отправлен в Telegram');
+    } catch (error) {
+      console.error('Ошибка периодического скриншота:', error.message);
+    }
+  }, periodicIntervalSeconds * 1000);
+}
+
+
+ // Остановка периодических скриншотов
+ 
+function stopPeriodicScreenshots() {
+  if (periodicInterval) {
+    clearInterval(periodicInterval);
+    periodicInterval = null;
+    
+    console.log('⏹️ Периодические скриншоты остановлены');
+    
+    ipcMain.emit('log-message', null, {
+      type: 'info',
+      message: '⏹️ Периодические скриншоты остановлены',
+    });
+  }
+}
+ 
+function togglePeriodicScreenshots(intervalSeconds) {
+  if (periodicInterval) {
+    stopPeriodicScreenshots();
+  } else {
+    startPeriodicScreenshots(intervalSeconds);
+  }
+}
+
+module.exports = { sendScreenshot,
+    startPeriodicScreenshots,
+    stopPeriodicScreenshots,
+    togglePeriodicScreenshots,
+ };
 
 
 

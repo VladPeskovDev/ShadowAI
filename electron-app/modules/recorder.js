@@ -15,6 +15,9 @@ if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 let recordProcess = null;
 let recordingFilePath = null;
 
+let conversationHistory = [];
+const MAX_HISTORY_PAIRS = 10;
+
 /**
  *  запись аудио (55 сек, mono, 16kHz)
  */
@@ -89,7 +92,7 @@ async function processAudioWithOpenAI(filePath) {
   try {
     const openai = getOpenAIClient();
     
-    // Транскрибация через Whisper
+    // Шаг 1: Транскрибация через Whisper
     timer.mark('Начало транскрибации');
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(filePath),
@@ -114,24 +117,39 @@ async function processAudioWithOpenAI(filePath) {
       message: `Распознано: "${transcribedText}"`,
     });
     
-    //Отправка в GPT со СТРИМИНГОМ
+    // Шаг 2: Подготовка контекста
     const audioPrompt = getAudioPrompt() || "Ты полезный ассистент.";
+    
+    // Инициализируем историю если пустая
+    if (conversationHistory.length === 0) {
+      conversationHistory.push({ role: "system", content: audioPrompt });
+    }
+    
+    // Добавляем новый вопрос пользователя
+    conversationHistory.push({ role: "user", content: transcribedText });
     
     timer.mark('Начало стриминга GPT');
     
+    // Шаг 3: Отправка в GPT с полной историей
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: "system", content: audioPrompt },
-        { role: "user", content: transcribedText }
-      ],
-      stream: true,  
+      messages: conversationHistory,
+      stream: true,
     });
     
     let fullResponse = '';
     let isFirstChunk = true;
+    let chunkCount = 0;
     
-    // Обрабатываем стрим по частям
+    // Настройки скорости вывода
+    const FAST_CHUNKS = 10;
+    const CHUNKS_PER_UPDATE_FAST = 1;
+    const CHUNKS_PER_UPDATE_SLOW = 3;
+    
+    let buffer = '';
+    let bufferCount = 0;
+    
+    // Обрабатываем стрим
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
       
@@ -142,15 +160,45 @@ async function processAudioWithOpenAI(filePath) {
         }
         
         fullResponse += content;
+        buffer += content;
+        bufferCount++;
+        chunkCount++;
         
-        // Отправляем каждый chunk в overlay (isStreaming = true)
-        sendOverlayText(fullResponse, true);
+        const chunksPerUpdate = chunkCount <= FAST_CHUNKS 
+          ? CHUNKS_PER_UPDATE_FAST 
+          : CHUNKS_PER_UPDATE_SLOW;
+        
+        if (bufferCount >= chunksPerUpdate) {
+          sendOverlayText(fullResponse, true);
+          buffer = '';
+          bufferCount = 0;
+          if (chunkCount <= 50) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+        }
       }
+    }
+    
+    if (buffer) {
+      sendOverlayText(fullResponse, true);
     }
     
     timer.mark('Стриминг завершен');
     
-    // Финальная отправка (isStreaming = false, чтобы включить таймер скрытия)
+    // Добавляем ответ ассистента в историю
+    conversationHistory.push({ role: "assistant", content: fullResponse });
+    
+    // Обрезаем историю если слишком длинная
+    // Оставляем system промпт + последние MAX_HISTORY_PAIRS * 2 сообщений
+    const maxMessages = (MAX_HISTORY_PAIRS * 2) + 1; // +1 для system
+    if (conversationHistory.length > maxMessages) {
+      conversationHistory = [
+        conversationHistory[0], // system промпт
+        ...conversationHistory.slice(-(MAX_HISTORY_PAIRS * 2)) // последние N пар
+      ];
+    }
+    
+    // Финальная отправка
     sendOverlayText(fullResponse, false);
     
     timer.end();
@@ -167,12 +215,18 @@ async function processAudioWithOpenAI(filePath) {
     
     timer.end();
     return null;
-  }
+  } 
+}
+
+function clearConversationHistory() {
+  conversationHistory = [];
+  console.log('[recorder] История диалога очищена');
 }
 
 module.exports = {
   startRecording,
   stopRecording,
+  clearConversationHistory,
 };
 
 

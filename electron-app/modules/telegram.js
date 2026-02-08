@@ -13,7 +13,8 @@ const defaultSettings = {
   microphoneIndex: ':0',
   telegramBotToken: '',
   telegramChatId: '',
-  sendScreenshotsToTelegram: false,  // <- НОВОЕ
+  sendScreenshotsToTelegram: false,  
+  screenshotInterval: 30, 
 };
 
 // Загружаем настройки из файла (или создаём файл, если его нет)
@@ -118,6 +119,14 @@ function setSendScreenshotsToTelegram(value) {  // <- НОВОЕ
   saveSettings(settings);
 }
 
+function getScreenshotInterval() {
+  return defaultSettings.screenshotInterval;
+}
+
+function setScreenshotInterval(value) {
+  defaultSettings.screenshotInterval = value;
+}
+
 module.exports = {
   getOpenAiApiKey,
   getAudioPrompt,
@@ -135,4 +144,6 @@ module.exports = {
   setTelegramBotToken,
   setTelegramChatId,
   setSendScreenshotsToTelegram,  
+  getScreenshotInterval,     
+  setScreenshotInterval,
 };

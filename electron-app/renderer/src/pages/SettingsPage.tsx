@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { loadSettings, saveSettings, listAudioDevices } from '../ipcBridge';
 import { AppSettings } from '../preload.d';
 import styles from './SettingsPage.module.css';
+import { clearContext } from '../ipcBridge';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -164,7 +165,51 @@ return (
       </div>
     </div>
 
-    {/* НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ - ДОБАВЬ СЮДА */}
+    {/* Секция контекста диалога */}
+<div className={styles.section}>
+  <h2 className={styles.sectionTitle}>Контекст диалога</h2>
+  <p className={styles.description}>
+    Диалог сохраняется в памяти (последние 10 пар вопрос-ответ).
+    Очистите контекст для начала новой темы разговора.
+  </p>
+  <button 
+    className={styles.clearButton}
+    onClick={() => {
+      clearContext();
+      alert('Контекст диалога очищен!');
+    }}
+  >
+    🔄 Очистить контекст
+  </button>
+</div>
+
+{/* Интервал периодических скриншотов */}
+<div className={styles.field}>
+  <label htmlFor="screenshotInterval" className={styles.label}>
+    Интервал периодических скриншотов (секунды)
+  </label>
+  <input
+  id="screenshotInterval"
+  type="text"
+  value={settings.screenshotInterval || ''}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, ''); // Только цифры
+    const num = parseInt(value);
+    if (num > 0) {
+      setSettings({ ...settings, screenshotInterval: num });
+    } else if (value === '') {
+      setSettings({ ...settings, screenshotInterval: undefined });
+    }
+  }}
+  className={styles.input}
+  placeholder="30"
+/>
+  <p className={styles.hint}>
+    Хоткей: Cmd+Shift+P для старт/стоп периодических скриншотов в Telegram
+  </p>
+</div>
+
+    {/* НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ */}
     <div className={styles.formGroup}>
       <div className={styles.switchCard}>
         <div className={styles.switchContent}>

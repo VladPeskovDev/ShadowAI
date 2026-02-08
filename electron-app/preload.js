@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listAudioDevices: () => ipcRenderer.invoke('list-audio-devices'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   hideSettings: () => ipcRenderer.send('hide-settings'),
+  clearContext: () => ipcRenderer.send('clear-context'), 
 });
 
 
