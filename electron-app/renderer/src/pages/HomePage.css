@@ -56,6 +56,17 @@
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+.home-btn.accent {
+  background: #30d158;
+  color: #fff;
+  width: 100%;
+  font-weight: 600;
+}
+
+.home-btn.accent:hover {
+  background: #28b84c;
+}
+
 .home-btn.primary {
   background: #007aff;
   color: #fff;

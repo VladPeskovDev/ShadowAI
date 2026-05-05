@@ -12,6 +12,9 @@ const HomePage = () => {
       </div>
 
       <div className="home-nav">
+        <button className="home-btn accent" onClick={() => navigate('/session')}>
+          Начать сессию
+        </button>
         <button className="home-btn primary" onClick={() => navigate('/settings')}>
           Настройки
         </button>

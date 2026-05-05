@@ -32,6 +32,8 @@ declare global {
       hideSettings: () => void;
       quitApp: () => void;
       clearContext: () => void;
+      startCallSession: (metadata: { title: string; description: string }) => void;
+      stopCallSession: () => void;
     };
 
     overlayBridge?: {

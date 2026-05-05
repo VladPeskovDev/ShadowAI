@@ -7,6 +7,7 @@ import ExitPage from './pages/ExitPage';
 import LogPage from './pages/LogPage';
 import LogListener from './components/LogListener';
 import HidePage from './pages/HidePage';
+import SessionPage from './pages/SessionPage';
 
 const router = createHashRouter([
   {
@@ -19,6 +20,7 @@ const router = createHashRouter([
       { path: '/hide', element: <HidePage /> }, 
       { path: '/exit', element: <ExitPage /> },
       { path: '/logs', element: <LogPage /> },
+      { path: '/session', element: <SessionPage /> },
     ],
   },
 ]);

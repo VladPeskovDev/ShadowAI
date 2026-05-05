@@ -16,6 +16,7 @@ const { createOverlayWindow, toggleOverlayWindow, getOverlayWindow } = require("
 const { toggleSettingsWindow } = require("./core/windows/settings");
 const { registerShortcuts } = require("./core/shortcuts/registerShortcuts");
 const { loadWhisperModel, isWhisperAvailable } = require("./utils/localWhisper");
+const { startCallSession, stopCallSession } = require("./modules/callSession");
 
 let ffmpegPath = require("ffmpeg-static");
 
@@ -155,6 +156,15 @@ ipcMain.on('clear-context', () => {
     type: 'info',
     message: 'Контекст диалога очищен',
   });
+});
+
+// Call session — старт/стоп из UI
+ipcMain.on('start-call-session', (event, metadata) => {
+  startCallSession(metadata);
+});
+
+ipcMain.on('stop-call-session', () => {
+  stopCallSession();
 });
 
 // Завершение приложения

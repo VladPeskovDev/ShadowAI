@@ -30,7 +30,7 @@ const FAQPage = () => {
             </tr>
             <tr>
               <td><kbd>Cmd+Enter</kbd></td>
-              <td>В call mode: обработать последние 30 сек. Иначе: начать/остановить запись</td>
+              <td>В call mode: отправить контекст в GPT (whisper не нужен, текст уже готов). Иначе: начать/остановить запись</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Left</kbd></td>
@@ -47,7 +47,7 @@ const FAQPage = () => {
       <h2 className={styles.subtitle}>Режимы</h2>
       <div className={styles.textBlock}>
         <p><strong>Обычный режим</strong> — Cmd+Enter для записи, повторно для остановки. Whisper расшифрует, GPT ответит в overlay.</p>
-        <p><strong>Call mode</strong> — Cmd+Shift+C запускает фоновую запись. Сидишь на созвоне, жмёшь Cmd+Enter когда нужна подсказка. Запись не прерывается.</p>
+        <p><strong>Call mode</strong> — запускается через UI (Начать сессию) или Cmd+Shift+C. Непрерывная запись + транскрипция в реальном времени. Cmd+Enter — подсказка мгновенно (текст уже расшифрован). Стенограмма сохраняется в ~/Documents/ShadowAI/.</p>
         <p><strong>Скриншот</strong> — Cmd+Left делает снимок, OCR распознаёт текст, GPT отвечает. Знает контекст разговора.</p>
       </div>
 

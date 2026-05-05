@@ -11,7 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listAudioDevices: () => ipcRenderer.invoke('list-audio-devices'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   hideSettings: () => ipcRenderer.send('hide-settings'),
-  clearContext: () => ipcRenderer.send('clear-context'), 
+  clearContext: () => ipcRenderer.send('clear-context'),
+  startCallSession: (metadata) => ipcRenderer.send('start-call-session', metadata),
+  stopCallSession: () => ipcRenderer.send('stop-call-session'),
 });
 
 

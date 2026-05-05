@@ -16,21 +16,26 @@ const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpack
 let isActive = false;
 let ffmpegProcess = null;
 let chunkIndex = 0;
-let chunkFiles = []; // ring buffer of file paths
+let chunkFiles = [];
 let isProcessing = false;
+let isTranscribing = false;
 
-const CHUNK_DURATION = 10; // секунд на чанк
-const MAX_CHUNKS = 12;     // хранить последние 2 минуты (12 * 10 = 120 сек)
-const PROCESS_CHUNKS = 3;  // обрабатывать последние 30 сек (3 * 10)
+// Session metadata
+let sessionMeta = null;
+let transcriptFile = null;
+
+const CHUNK_DURATION = 10;
+const MAX_CHUNKS = 12;
 
 const sessionDir = path.join(os.tmpdir(), 'shadowai-call-session');
+const docsDir = path.join(os.homedir(), 'Documents', 'ShadowAI');
 
 // --- Public API ---
 
-function startCallSession() {
+function startCallSession(metadata = {}) {
   if (isActive) return;
 
-  // Чистим/создаём директорию
+  // Создаём папки
   if (fs.existsSync(sessionDir)) {
     fs.readdirSync(sessionDir).forEach(f => {
       try { fs.unlinkSync(path.join(sessionDir, f)); } catch {}
@@ -39,13 +44,40 @@ function startCallSession() {
     fs.mkdirSync(sessionDir, { recursive: true });
   }
 
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+  }
+
+  // Metadata
+  sessionMeta = {
+    title: metadata.title || 'Без названия',
+    description: metadata.description || '',
+    startTime: new Date(),
+  };
+
+  // Создаём файл стенограммы
+  const dateStr = formatDate(sessionMeta.startTime);
+  const safeTitle = sessionMeta.title.replace(/[/\\?%*:|"<>]/g, '_');
+  transcriptFile = path.join(docsDir, `${dateStr}_${safeTitle}.md`);
+
+  const header = [
+    `# ${sessionMeta.title}`,
+    `**Дата:** ${sessionMeta.startTime.toLocaleString('ru-RU')}`,
+    sessionMeta.description ? `**Описание:** ${sessionMeta.description}` : '',
+    '',
+    '---',
+    '',
+  ].filter(Boolean).join('\n');
+
+  fs.writeFileSync(transcriptFile, header);
+
   isActive = true;
   chunkIndex = 0;
   chunkFiles = [];
 
   ipcMain.emit('log-message', null, {
     type: 'info',
-    message: 'Call session запущена — непрерывная запись',
+    message: `Call session: "${sessionMeta.title}" — запись идёт`,
   });
 
   startNextChunk();
@@ -61,6 +93,13 @@ function stopCallSession() {
     ffmpegProcess = null;
   }
 
+  // Дописываем финал в стенограмму
+  if (transcriptFile && fs.existsSync(transcriptFile)) {
+    const endTime = new Date();
+    const duration = Math.round((endTime - sessionMeta.startTime) / 60000);
+    fs.appendFileSync(transcriptFile, `\n---\n**Завершено:** ${endTime.toLocaleTimeString('ru-RU')} (${duration} мин)\n`);
+  }
+
   // Чистим временные файлы
   chunkFiles.forEach(f => {
     try { fs.unlinkSync(f); } catch {}
@@ -69,8 +108,11 @@ function stopCallSession() {
 
   ipcMain.emit('log-message', null, {
     type: 'info',
-    message: 'Call session остановлена',
+    message: `Call session остановлена. Стенограмма: ${transcriptFile}`,
   });
+
+  sessionMeta = null;
+  transcriptFile = null;
 }
 
 function toggleCallSession() {
@@ -87,9 +129,9 @@ function isCallSessionActive() {
 }
 
 /**
- * Обработать последние N секунд записи
+ * Отправить готовый текст из transcript в GPT (без whisper)
  */
-async function processLastChunks() {
+async function processFromTranscript() {
   if (!isActive) {
     ipcMain.emit('log-message', null, {
       type: 'warning',
@@ -106,86 +148,10 @@ async function processLastChunks() {
     return;
   }
 
-  // Берём готовые чанки (все кроме текущего записываемого)
-  const readyChunks = chunkFiles.slice(0, -1).slice(-PROCESS_CHUNKS);
-
-  if (readyChunks.length === 0) {
-    ipcMain.emit('log-message', null, {
-      type: 'warning',
-      message: 'Недостаточно записи — подождите несколько секунд',
-    });
-    return;
-  }
-
-  // Проверяем что файлы существуют и не пустые
-  const validChunks = readyChunks.filter(f => {
-    try {
-      return fs.existsSync(f) && fs.statSync(f).size > 0;
-    } catch { return false; }
-  });
-
-  if (validChunks.length === 0) return;
-
   isProcessing = true;
-
   const timer = new Timer('CALL SESSION');
 
   try {
-    // Склеиваем чанки в один файл
-    timer.mark('Склейка чанков');
-    const mergedFile = path.join(sessionDir, `merged_${Date.now()}.wav`);
-    await mergeChunks(validChunks, mergedFile);
-
-    if (!fs.existsSync(mergedFile) || fs.statSync(mergedFile).size === 0) {
-      ipcMain.emit('log-message', null, {
-        type: 'error',
-        message: 'Не удалось склеить аудио-чанки',
-      });
-      isProcessing = false;
-      timer.end();
-      return;
-    }
-
-    // Whisper — локальный или API fallback
-    let text;
-    if (isWhisperAvailable()) {
-      timer.mark('Транскрибация (локальный Whisper)');
-      text = transcribeLocal(mergedFile, 'ru');
-    } else {
-      timer.mark('Транскрибация (Whisper API fallback)');
-      const openai = getOpenAIClient();
-      const transcription = await openai.audio.transcriptions.create({
-        file: fs.createReadStream(mergedFile),
-        model: 'whisper-1',
-        language: 'ru',
-      });
-      text = transcription.text;
-    }
-
-    timer.mark('Транскрибация завершена');
-
-    // Удаляем merged файл
-    try { fs.unlinkSync(mergedFile); } catch {}
-
-    if (!text || text.trim() === '') {
-      ipcMain.emit('log-message', null, {
-        type: 'warning',
-        message: 'Whisper не распознал речь',
-      });
-      isProcessing = false;
-      timer.end();
-      return;
-    }
-
-    ipcMain.emit('log-message', null, {
-      type: 'info',
-      message: `Распознано: "${text}"`,
-    });
-
-    // Сохраняем в контекст
-    addEntry('me', text);
-
-    // GPT
     const openai = getOpenAIClient();
     const audioPrompt = getAudioPrompt() || 'Ты полезный ассистент.';
     const messages = buildContext(audioPrompt);
@@ -216,6 +182,7 @@ async function processLastChunks() {
     timer.mark('Стриминг завершён');
 
     addEntry('assistant', fullResponse);
+    appendToTranscript('assistant', fullResponse);
     sendOverlayText(fullResponse, false);
 
     timer.end();
@@ -242,7 +209,6 @@ function startNextChunk() {
   chunkFiles.push(chunkFile);
   chunkIndex++;
 
-  // Удаляем старые чанки если превысили лимит
   while (chunkFiles.length > MAX_CHUNKS) {
     const old = chunkFiles.shift();
     try { fs.unlinkSync(old); } catch {}
@@ -260,42 +226,79 @@ function startNextChunk() {
   }
 
   ffmpegProcess = exec(cmd, (error) => {
-    if (error && !error.killed && isActive) {
-      // ffmpeg завершился нормально (по -t) — запускаем следующий чанк
-    }
     ffmpegProcess = null;
 
     if (isActive) {
+      // Чанк записан — транскрибируем фоново
+      transcribeChunk(chunkFile);
       startNextChunk();
     }
   });
 }
 
-function mergeChunks(files, outputPath) {
-  return new Promise((resolve, reject) => {
-    if (files.length === 1) {
-      fs.copyFileSync(files[0], outputPath);
-      return resolve();
+/**
+ * Фоновая транскрипция чанка — результат в transcript + файл
+ */
+async function transcribeChunk(chunkFile) {
+  if (!isActive) return;
+  if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
+
+  // Ждём если другая транскрипция идёт (последовательно, не параллельно)
+  while (isTranscribing) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  isTranscribing = true;
+
+  try {
+    let text = null;
+
+    if (isWhisperAvailable()) {
+      text = transcribeLocal(chunkFile, 'ru');
     }
 
-    // ffmpeg concat через file list
-    const listFile = path.join(sessionDir, 'concat_list.txt');
-    const listContent = files.map(f => `file '${f}'`).join('\n');
-    fs.writeFileSync(listFile, listContent);
+    if (text && text.trim() !== '') {
+      addEntry('me', text);
+      appendToTranscript('me', text);
 
-    const cmd = `"${ffmpegPath}" -f concat -safe 0 -i "${listFile}" -ar 16000 -ac 1 -y "${outputPath}"`;
+      ipcMain.emit('log-message', null, {
+        type: 'info',
+        message: `[live] ${text.substring(0, 60)}...`,
+      });
+    }
+  } catch (err) {
+    console.error('[callSession] Transcribe chunk error:', err.message);
+  } finally {
+    isTranscribing = false;
+  }
+}
 
-    exec(cmd, (error) => {
-      try { fs.unlinkSync(listFile); } catch {}
+/**
+ * Дописать строку в файл стенограммы
+ */
+function appendToTranscript(speaker, text) {
+  if (!transcriptFile || !fs.existsSync(transcriptFile)) return;
 
-      if (error) {
-        console.error('[callSession] Merge error:', error.message);
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
+  const timeStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const label = speaker === 'me' ? 'Я'
+    : speaker === 'them' ? 'Собеседник'
+    : speaker === 'assistant' ? '💡 Подсказка'
+    : speaker;
+
+  const line = `[${timeStr}] ${label}: ${text}\n`;
+
+  try {
+    fs.appendFileSync(transcriptFile, line);
+  } catch (err) {
+    console.error('[callSession] Write transcript error:', err.message);
+  }
+}
+
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 module.exports = {
@@ -303,5 +306,5 @@ module.exports = {
   stopCallSession,
   toggleCallSession,
   isCallSessionActive,
-  processLastChunks,
+  processFromTranscript,
 };

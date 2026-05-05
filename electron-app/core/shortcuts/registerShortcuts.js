@@ -4,7 +4,7 @@ function registerShortcuts({ toggleSettingsWindow, toggleOverlayWindow, getOverl
   // Импорты внутри функции (после app.ready)
   const { sendScreenshot, togglePeriodicScreenshots } = require("../../modules/screenshot");
   const { startRecording, stopRecording } = require("../../modules/recorder");
-  const { toggleCallSession, isCallSessionActive, processLastChunks } = require("../../modules/callSession");
+  const { toggleCallSession, isCallSessionActive, processFromTranscript } = require("../../modules/callSession");
   const { showOverlayEffect } = require("../../utils/overlayEffect");
   const { getScreenshotInterval } = require('../../modules/telegram');
 
@@ -21,13 +21,13 @@ function registerShortcuts({ toggleSettingsWindow, toggleOverlayWindow, getOverl
   // Cmd+Enter — умный: в call mode → обработать последние 30 сек, иначе → старая запись
   globalShortcut.register("CommandOrControl+Enter", async () => {
     if (isCallSessionActive()) {
-      // Call mode — обработать последние чанки
+      // Call mode — текст уже готов, отправляем в GPT
       ipcMain.emit("log-message", null, {
         type: "info",
-        message: "Обработка последних 30 сек...",
+        message: "Отправка контекста в GPT...",
       });
       showOverlayEffect(getOverlayEffectEnabled());
-      await processLastChunks();
+      await processFromTranscript();
     } else {
       // Обычный режим — start/stop запись
       ipcMain.emit("log-message", null, {
