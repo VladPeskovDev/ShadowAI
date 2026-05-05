@@ -7,24 +7,78 @@
 }
 
 .title {
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 700;
   text-align: center;
   margin-bottom: 20px;
   color: #f0f0f0;
 }
 
+.subtitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f0f0f0;
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
 .textBlock {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.6;
   background-color: #242438;
-  padding: 20px;
+  padding: 16px;
   border-radius: 10px;
   border: 1px solid #3a3a50;
 }
 
 .textBlock p {
-  margin-bottom: 12px;
+  margin: 0 0 10px;
+  color: #c8c8d0;
+}
+
+.textBlock p:last-child {
+  margin-bottom: 0;
+}
+
+.textBlock strong {
+  color: #f0f0f0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: #999;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #3a3a50;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #2a2a3e;
+  color: #c8c8d0;
+  font-size: 14px;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table kbd {
+  background: #1a1a2e;
+  border: 1px solid #3a3a50;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #007aff;
+  white-space: nowrap;
 }
 
 .button {

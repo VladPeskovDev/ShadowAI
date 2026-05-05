@@ -310,6 +310,8 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { optimizeForOcr } = nativeBinding
+const { optimizeForOcr, whisperLoadModel, whisperTranscribe } = nativeBinding
 
 module.exports.optimizeForOcr = optimizeForOcr
+module.exports.whisperLoadModel = whisperLoadModel
+module.exports.whisperTranscribe = whisperTranscribe

@@ -11,6 +11,7 @@ napi = "2"
 napi-derive = "2"
 image = "0.24"
 fast_image_resize = "3.0"
+whisper-rs = { version = "0.13", features = ["metal"] }
 
 [build-dependencies]
 napi-build = "2"

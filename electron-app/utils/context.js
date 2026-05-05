@@ -29,6 +29,13 @@ setInterval(() => {
   lastBackupIndex = transcript.length;
 }, 30000);
 
+// Периодический summary каждые 5 мин
+setInterval(() => {
+  updateSummary().catch(err => {
+    console.error('[context] Auto-summary error:', err.message);
+  });
+}, 5 * 60 * 1000);
+
 // --- Public API ---
 
 /**
@@ -71,49 +78,41 @@ function buildContext(systemPrompt, options = {}) {
   const recent = transcript.filter(e => e.time >= cutoff);
 
   // Формируем текст контекста
-  let contextText = '';
+  let contextParts = [];
 
   // Старая часть — summary (если есть)
   if (old.length > 0 && cachedSummary) {
-    contextText += `## Краткое содержание (ранее):\n${cachedSummary}\n\n`;
+    contextParts.push(`## Краткое содержание (ранее):\n${cachedSummary}`);
   }
 
   // Свежая часть — дословно
   if (recent.length > 0) {
-    contextText += `## Последние ${recentMinutes} мин диалога:\n`;
-    contextText += formatTranscript(recent);
+    contextParts.push(`## Последние ${recentMinutes} мин диалога:\n${formatTranscript(recent)}`);
   }
 
-  // Проверяем размер
+  let contextText = contextParts.join('\n\n');
+
+  // Проверяем размер — если слишком большой и нет summary, обрезаем старое
   const estimatedTokens = Math.ceil(contextText.length / 3.5);
   if (estimatedTokens > maxTokensEstimate && old.length > 0 && !cachedSummary) {
-    // Нужен summary но его ещё нет — отдаём что влезает
-    const recentText = formatTranscript(recent);
-    contextText = `## Последние ${recentMinutes} мин диалога:\n${recentText}`;
+    contextText = `## Последние ${recentMinutes} мин диалога:\n${formatTranscript(recent)}`;
   }
 
   if (contextText) {
     messages.push({ role: 'user', content: contextText });
   }
 
-  // Добавляем последнее сообщение от собеседника/пользователя как отдельный user message
-  const lastEntry = getLastNonAssistantEntry();
-  if (lastEntry) {
-    const label = speakerLabel(lastEntry.speaker);
-    messages.push({ role: 'user', content: `${label}: "${lastEntry.text}"` });
-  }
-
   return messages;
 }
 
 /**
- * Обновить summary (вызывать периодически, например раз в 5 мин)
+ * Обновить summary (вызывается автоматически каждые 5 мин)
  */
 async function updateSummary() {
   const recentCutoff = Date.now() - 5 * 60 * 1000;
   const old = transcript.filter(e => e.time < recentCutoff && e.speaker !== 'assistant');
 
-  if (old.length <= lastSummaryIndex + 5) return; // недостаточно нового для пересуммаризации
+  if (old.length <= lastSummaryIndex + 5) return;
 
   const textToSummarize = formatTranscript(old.slice(lastSummaryIndex));
 
@@ -138,6 +137,7 @@ async function updateSummary() {
 
     cachedSummary = response.choices[0]?.message?.content?.trim() || cachedSummary;
     lastSummaryIndex = old.length;
+    console.log('[context] Summary updated');
   } catch (err) {
     console.error('[context] Summary error:', err.message);
   }
@@ -174,13 +174,6 @@ function speakerLabel(speaker) {
     case 'assistant': return 'Ассистент';
     default: return speaker;
   }
-}
-
-function getLastNonAssistantEntry() {
-  for (let i = transcript.length - 1; i >= 0; i--) {
-    if (transcript[i].speaker !== 'assistant') return transcript[i];
-  }
-  return null;
 }
 
 module.exports = {

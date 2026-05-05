@@ -15,6 +15,7 @@ const { spawnSync } = require("child_process");
 const { createOverlayWindow, toggleOverlayWindow, getOverlayWindow } = require("./core/windows/overlay");
 const { toggleSettingsWindow } = require("./core/windows/settings");
 const { registerShortcuts } = require("./core/shortcuts/registerShortcuts");
+const { loadWhisperModel, isWhisperAvailable } = require("./utils/localWhisper");
 
 let ffmpegPath = require("ffmpeg-static");
 
@@ -29,6 +30,13 @@ let overlayEffectEnabled = getOverlayEffectEnabled();
 
 app.whenReady().then(() => {
   createOverlayWindow();
+
+  // Загружаем локальный whisper (если модель есть)
+  if (isWhisperAvailable()) {
+    loadWhisperModel();
+  } else {
+    console.log('[main] Whisper model not found — using API fallback. Download ggml-small.bin to models/');
+  }
 
   // Регистрируем шорт каты
   registerShortcuts({
@@ -180,11 +188,13 @@ app.on("will-quit", () => {
 
 
 
-/* 
+/*
 CommandOrControl+Shift+S – Открыть / Закрыть окно настроек.
 CommandOrControl+Left – Отправить скриншот.
-CommandOrControl+Enter – Начать / Остановить запись.
-CommandOrControl+Shift+D - Открыть или Закрыть окно overlay.
+CommandOrControl+Enter – В call mode: обработать последние 30 сек. Иначе: начать/остановить запись.
+CommandOrControl+Shift+D – Открыть / Закрыть окно overlay.
+CommandOrControl+Shift+P – Периодические скриншоты в Telegram (toggle).
+CommandOrControl+Shift+C – Call mode (toggle): непрерывная фоновая запись.
 */
 
 

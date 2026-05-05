@@ -143,3 +143,6 @@ native/target/
 
 # Project backlog
 BACKLOG.md
+
+# Whisper models (large binary files)
+models/*.bin

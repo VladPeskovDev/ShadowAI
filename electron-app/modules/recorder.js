@@ -7,6 +7,7 @@ const { getOpenAIClient } = require("../utils/openaiClient");
 const { sendOverlayText } = require("../utils/overlayMessenger");
 const { Timer } = require("../utils/timer");
 const { addEntry, buildContext } = require("../utils/context");
+const { transcribeLocal, isWhisperAvailable } = require("../utils/localWhisper");
 
 const ffmpegPath = require("ffmpeg-static").replace("app.asar", "app.asar.unpacked");
 const tempDir = path.join(os.tmpdir(), "hack-sobes-recordings");
@@ -23,7 +24,7 @@ async function startRecording() {
   const micIndex = getMicrophoneIndex() || ":0";
 
   const timestamp = Date.now();
-  recordingFilePath = path.join(tempDir, `recording_${timestamp}.flac`);
+  recordingFilePath = path.join(tempDir, `recording_${timestamp}.wav`);
 
   const { exec } = require("child_process");
   const platform = os.platform();
@@ -89,16 +90,24 @@ async function processAudioWithOpenAI(filePath) {
   try {
     const openai = getOpenAIClient();
 
-    // Шаг 1: Транскрибация через Whisper
+    // Шаг 1: Транскрибация — локальный whisper или API fallback
     timer.mark('Начало транскрибации');
-    const transcription = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(filePath),
-      model: "whisper-1",
-      language: "ru",
-    });
+    let transcribedText;
+
+    if (isWhisperAvailable()) {
+      timer.mark('Whisper (локальный)');
+      transcribedText = transcribeLocal(filePath, 'ru');
+    } else {
+      timer.mark('Whisper (API fallback)');
+      const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: "whisper-1",
+        language: "ru",
+      });
+      transcribedText = transcription.text;
+    }
 
     timer.mark('Транскрибация завершена');
-    const transcribedText = transcription.text;
 
     if (!transcribedText || transcribedText.trim() === '') {
       ipcMain.emit("log-message", null, {
