@@ -140,3 +140,6 @@ dist
 /electron-app/bin/
 /native/target/native/**/*.node
 native/target/
+
+# Project backlog
+BACKLOG.md

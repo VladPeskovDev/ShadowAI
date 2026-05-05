@@ -1,45 +1,45 @@
 .container {
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 20px;
-    color: white;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  
-  .title {
-    font-size: 28px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 20px;
-    color: white;
-    text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
-  }
-  
-  .textBlock {
-    font-size: 16px;
-    line-height: 1.6;
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 20px;
-    border-radius: 10px;
-    
-  }
-  
-  .textBlock p {
-    margin-bottom: 12px;
-  }
-  
-  .button {
-    background: #007aff;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-size: 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    width: 100%;
-    margin-top: 20px;
-    opacity: 0.85;
-  }
-  
-  
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  color: #e0e0e4;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #f0f0f0;
+}
+
+.textBlock {
+  font-size: 16px;
+  line-height: 1.6;
+  background-color: #242438;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #3a3a50;
+}
+
+.textBlock p {
+  margin-bottom: 12px;
+}
+
+.button {
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.button:hover {
+  background: #0066d6;
+}

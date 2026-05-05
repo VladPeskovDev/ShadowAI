@@ -33,6 +33,7 @@ function createOverlayWindow() {
     },
   });
 
+  overlayWindow.setContentProtection(true);
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 

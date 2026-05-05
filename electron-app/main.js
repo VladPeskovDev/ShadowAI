@@ -2,7 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { sendScreenshot  } = require("./modules/screenshot");
-const { startRecording, stopRecording, clearConversationHistory } = require("./modules/recorder");
+const { startRecording, stopRecording } = require("./modules/recorder");
+const { clearContext } = require("./utils/context");
 const { setOpenAiApiKey, setAudioPrompt, setScreenshotPrompt, getOpenAiApiKey, getAudioPrompt, getScreenshotPrompt,
   getOverlayEffectEnabled, setOverlayEffectEnabled,
   getMicrophoneIndex, setMicrophoneIndex,
@@ -141,7 +142,7 @@ ipcMain.handle('open-external', async (_event, url) => {
 
 // Очистка контекста диалога
 ipcMain.on('clear-context', () => {
-  clearConversationHistory();
+  clearContext();
   ipcMain.emit('log-message', null, {
     type: 'info',
     message: 'Контекст диалога очищен',

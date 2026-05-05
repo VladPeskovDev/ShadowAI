@@ -120,11 +120,12 @@ function setSendScreenshotsToTelegram(value) {  // <- НОВОЕ
 }
 
 function getScreenshotInterval() {
-  return defaultSettings.screenshotInterval;
+  return settings.screenshotInterval || 30;
 }
 
 function setScreenshotInterval(value) {
-  defaultSettings.screenshotInterval = value;
+  settings.screenshotInterval = value;
+  saveSettings(settings);
 }
 
 module.exports = {

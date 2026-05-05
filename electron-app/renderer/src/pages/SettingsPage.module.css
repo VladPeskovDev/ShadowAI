@@ -41,12 +41,12 @@
   width: 100%;
   max-width: 400px;
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #3a3a50;
   border-radius: 8px;
   font-size: 15px;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #fff;
-  color: #000;
+  background-color: #242438;
+  color: #f0f0f0;
   box-sizing: border-box;
 }
 
@@ -133,8 +133,8 @@
   align-items: center;
   border-radius: 8px;
   padding: 12px;
-  border: 1px solid #ccc;
-  background: transparent;
+  border: 1px solid #3a3a50;
+  background: #242438;
   box-sizing: border-box;
   width: 100%;
   max-width: 400px;
@@ -262,6 +262,18 @@ hr {
   border-top: 1px solid #444;
   width: 100%;
   max-width: 400px;
+}
+
+.description {
+  font-size: 13px;
+  color: #d0d0d0;
+  margin-bottom: 10px;
+}
+
+.hint {
+  font-size: 13px;
+  color: #d0d0d0;
+  margin-top: 6px;
 }
 
 .clearButton {

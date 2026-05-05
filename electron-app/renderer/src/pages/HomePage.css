@@ -1,52 +1,100 @@
 .home {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    gap: 20px;
-    height: 100%;
-    box-sizing: border-box;
-    text-align: center;
-  }
-  
-  .home h1 {
-    font-size: 28px;
-    margin-bottom: 20px;
-    font-weight: 600;
-    color: #1c1c1e;
-  }
-  
-  .button {
-    background: #007aff;
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    font-size: 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    width: 200px;
-    opacity: 0.75;
-  }
-  
-  .button:hover {
-    background: #005bbb;
-  }
-  
-  .exit-btn {
-     background: #fff;
-  color: #007aff;
-  border: 1px solid #007aff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  gap: 32px;
+}
+
+.home-header {
+  text-align: center;
+}
+
+.home-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.home-version {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+  display: block;
+}
+
+.home-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+}
+
+.home-row {
+  display: flex;
+  gap: 10px;
+}
+
+.home-row .home-btn {
+  flex: 1;
+}
+
+.home-btn {
+  border: none;
+  padding: 12px 20px;
   font-size: 15px;
-  margin-top: 10px;
-  opacity: 0.75;
-  transition: background 0.2s, color 0.2s;
-  }
-  
-  .exit-btn:hover {
-    background: #f4f9ff;
-  color: #005bbb;
-  opacity: 1;
-  }
-  
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.home-btn.primary {
+  background: #007aff;
+  color: #fff;
+  width: 100%;
+}
+
+.home-btn.primary:hover {
+  background: #0066d6;
+}
+
+.home-btn.secondary {
+  background: #2a2a3e;
+  color: #c8c8d0;
+  border: 1px solid #3a3a50;
+}
+
+.home-btn.secondary:hover {
+  background: #33334a;
+  color: #f0f0f0;
+  border-color: #505070;
+}
+
+.home-footer {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.home-btn.ghost {
+  background: transparent;
+  color: #666;
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+.home-btn.ghost:hover {
+  color: #999;
+}
+
+.home-btn.ghost.danger:hover {
+  color: #ff4444;
+}
