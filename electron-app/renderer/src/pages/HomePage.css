@@ -67,6 +67,17 @@
   background: #28b84c;
 }
 
+.home-btn.stop {
+  background: #ff3b30;
+  color: #fff;
+  width: 100%;
+  font-weight: 600;
+}
+
+.home-btn.stop:hover {
+  background: #d32f2f;
+}
+
 .home-btn.primary {
   background: #007aff;
   color: #fff;

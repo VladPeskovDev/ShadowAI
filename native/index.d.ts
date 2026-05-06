@@ -11,3 +11,9 @@ export declare function whisperLoadModel(modelPath: string): void
  * Audio must be 16kHz mono (whisper requirement).
  */
 export declare function whisperTranscribe(filePath: string, language?: string | undefined | null): string
+/** Start capturing system audio. Saves WAV chunks to output_dir. */
+export declare function startSystemAudioCapture(outputDir: string, chunkDurationSecs?: number | undefined | null): void
+/** Stop capturing system audio. */
+export declare function stopSystemAudioCapture(): void
+/** Check if system audio capture is active */
+export declare function isSystemAudioActive(): boolean

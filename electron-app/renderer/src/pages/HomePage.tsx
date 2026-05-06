@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './HomePage.css';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const [sessionActive, setSessionActive] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.getCallSessionStatus().then(setSessionActive);
+  }, []);
+
+  const handleStopSession = () => {
+    window.electronAPI.stopCallSession();
+    setSessionActive(false);
+  };
 
   return (
     <div className="home">
@@ -12,9 +23,15 @@ const HomePage = () => {
       </div>
 
       <div className="home-nav">
-        <button className="home-btn accent" onClick={() => navigate('/session')}>
-          Начать сессию
-        </button>
+        {sessionActive ? (
+          <button className="home-btn stop" onClick={handleStopSession}>
+            Завершить сессию
+          </button>
+        ) : (
+          <button className="home-btn accent" onClick={() => navigate('/session')}>
+            Начать сессию
+          </button>
+        )}
         <button className="home-btn primary" onClick={() => navigate('/settings')}>
           Настройки
         </button>

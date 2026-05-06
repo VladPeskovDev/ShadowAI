@@ -9,6 +9,7 @@ const { sendOverlayText } = require('../utils/overlayMessenger');
 const { addEntry, buildContext } = require('../utils/context');
 const { transcribeLocal, isWhisperAvailable } = require('../utils/localWhisper');
 const { Timer } = require('../utils/timer');
+const { getSessionPrompt } = require('../utils/sessionPrompts');
 
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
 
@@ -19,6 +20,11 @@ let chunkIndex = 0;
 let chunkFiles = [];
 let isProcessing = false;
 let isTranscribing = false;
+
+// System audio (BlackHole)
+let sysAudioProcess = null;
+let sysChunkIndex = 0;
+let sysChunkFiles = [];
 
 // Session metadata
 let sessionMeta = null;
@@ -52,6 +58,7 @@ function startCallSession(metadata = {}) {
   sessionMeta = {
     title: metadata.title || 'Без названия',
     description: metadata.description || '',
+    mode: metadata.mode || 'interview',
     startTime: new Date(),
   };
 
@@ -60,9 +67,11 @@ function startCallSession(metadata = {}) {
   const safeTitle = sessionMeta.title.replace(/[/\\?%*:|"<>]/g, '_');
   transcriptFile = path.join(docsDir, `${dateStr}_${safeTitle}.md`);
 
+  const modeLabels = { interview: 'Собеседование', translator: 'Переводчик', meeting: 'Встреча' };
   const header = [
     `# ${sessionMeta.title}`,
     `**Дата:** ${sessionMeta.startTime.toLocaleString('ru-RU')}`,
+    `**Режим:** ${modeLabels[sessionMeta.mode] || sessionMeta.mode}`,
     sessionMeta.description ? `**Описание:** ${sessionMeta.description}` : '',
     '',
     '---',
@@ -80,7 +89,16 @@ function startCallSession(metadata = {}) {
     message: `Call session: "${sessionMeta.title}" — запись идёт`,
   });
 
+  // Переключаем audio output на Multi-Output Device (для BlackHole)
+  switchAudioOutput('multi-output');
+
+  // Запускаем mic запись (чанками через ffmpeg)
   startNextChunk();
+
+  // Запускаем system audio через BlackHole (если доступен)
+  sysChunkIndex = 0;
+  sysChunkFiles = [];
+  startNextSysChunk();
 }
 
 function stopCallSession() {
@@ -92,6 +110,18 @@ function stopCallSession() {
     ffmpegProcess.kill('SIGTERM');
     ffmpegProcess = null;
   }
+
+  // Останавливаем system audio
+  if (sysAudioProcess) {
+    sysAudioProcess.kill('SIGTERM');
+    sysAudioProcess = null;
+  }
+
+  // Чистим sys chunk файлы
+  sysChunkFiles.forEach(f => {
+    try { fs.unlinkSync(f); } catch {}
+  });
+  sysChunkFiles = [];
 
   // Дописываем финал в стенограмму
   if (transcriptFile && fs.existsSync(transcriptFile)) {
@@ -105,6 +135,9 @@ function stopCallSession() {
     try { fs.unlinkSync(f); } catch {}
   });
   chunkFiles = [];
+
+  // Возвращаем audio output на динамики
+  switchAudioOutput('speakers');
 
   ipcMain.emit('log-message', null, {
     type: 'info',
@@ -153,8 +186,14 @@ async function processFromTranscript() {
 
   try {
     const openai = getOpenAIClient();
-    const audioPrompt = getAudioPrompt() || 'Ты полезный ассистент.';
-    const messages = buildContext(audioPrompt);
+    // Объединяем: промпт режима + пользовательский промпт из настроек
+    const modePrompt = sessionMeta ? getSessionPrompt(sessionMeta.mode) : '';
+    const userPrompt = getAudioPrompt() || '';
+    const parts = [modePrompt, userPrompt].filter(Boolean);
+    const prompt = parts.length > 0
+      ? parts.join('\n\nДополнительный контекст от пользователя:\n')
+      : 'Ты полезный ассистент.';
+    const messages = buildContext(prompt);
 
     timer.mark('Начало стриминга GPT');
 
@@ -263,7 +302,7 @@ async function transcribeChunk(chunkFile) {
 
       ipcMain.emit('log-message', null, {
         type: 'info',
-        message: `[live] ${text.substring(0, 60)}...`,
+        message: `[MIC/Я] ${text.substring(0, 80)}`,
       });
     }
   } catch (err) {
@@ -291,6 +330,139 @@ function appendToTranscript(speaker, text) {
     fs.appendFileSync(transcriptFile, line);
   } catch (err) {
     console.error('[callSession] Write transcript error:', err.message);
+  }
+}
+
+// --- System audio recording via BlackHole (ffmpeg) ---
+
+const BLACKHOLE_DEVICE = 'BlackHole 2ch';
+
+function startNextSysChunk() {
+  if (!isActive) return;
+
+  // Проверяем доступность BlackHole
+  if (sysChunkIndex === 0) {
+    const { spawnSync } = require('child_process');
+    const result = spawnSync(ffmpegPath, ['-f', 'avfoundation', '-list_devices', 'true', '-i', ''], {
+      encoding: 'utf8',
+    });
+    const stderr = result.stderr || '';
+    if (!stderr.includes('BlackHole')) {
+      ipcMain.emit('log-message', null, {
+        type: 'warning',
+        message: 'BlackHole не найден — system audio не записывается. Установите: brew install blackhole-2ch',
+      });
+      return;
+    }
+  }
+
+  const chunkFile = path.join(sessionDir, `sys_chunk_${String(sysChunkIndex).padStart(4, '0')}.wav`);
+  sysChunkFiles.push(chunkFile);
+  sysChunkIndex++;
+
+  // Удаляем старые sys чанки
+  while (sysChunkFiles.length > MAX_CHUNKS) {
+    const old = sysChunkFiles.shift();
+    try { fs.unlinkSync(old); } catch {}
+  }
+
+  const cmd = `"${ffmpegPath}" -f avfoundation -i ":${BLACKHOLE_DEVICE}" -t ${CHUNK_DURATION} -ar 16000 -ac 1 -y "${chunkFile}"`;
+
+  sysAudioProcess = exec(cmd, (error) => {
+    sysAudioProcess = null;
+
+    if (isActive) {
+      // Транскрибируем чанк system audio
+      transcribeSysChunk(chunkFile);
+      startNextSysChunk();
+    }
+  });
+}
+
+async function transcribeSysChunk(chunkFile) {
+  if (!isActive) return;
+  if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
+
+  while (isTranscribing) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  isTranscribing = true;
+
+  try {
+    let text = null;
+
+    if (isWhisperAvailable()) {
+      text = transcribeLocal(chunkFile, 'ru');
+    }
+
+    if (text && text.trim() !== '') {
+      addEntry('them', text);
+      appendToTranscript('them', text);
+
+      ipcMain.emit('log-message', null, {
+        type: 'info',
+        message: `[SYSTEM/Собеседник] ${text.substring(0, 80)}`,
+      });
+    }
+  } catch (err) {
+    console.error('[callSession] Sys transcribe error:', err.message);
+  } finally {
+    isTranscribing = false;
+  }
+}
+
+// --- Audio output switching ---
+
+let previousAudioOutput = null;
+
+function switchAudioOutput(target) {
+  const { execSync } = require('child_process');
+
+  try {
+    // Проверяем есть ли SwitchAudioSource
+    execSync('which SwitchAudioSource', { encoding: 'utf8' });
+  } catch {
+    console.log('[callSession] SwitchAudioSource not found — install: brew install switchaudio-osx');
+    return;
+  }
+
+  try {
+    if (target === 'multi-output') {
+      // Запоминаем текущий output
+      previousAudioOutput = execSync('SwitchAudioSource -c -t output', { encoding: 'utf8' }).trim();
+
+      // Ищем Multi-Output Device
+      const devices = execSync('SwitchAudioSource -a -t output', { encoding: 'utf8' });
+      const multiOutput = devices.split('\n').find(d =>
+        d.toLowerCase().includes('multi') || d.toLowerCase().includes('много')
+      );
+
+      if (multiOutput) {
+        execSync(`SwitchAudioSource -s "${multiOutput.trim()}" -t output`);
+        console.log(`[callSession] Audio output → ${multiOutput.trim()}`);
+      } else {
+        console.log('[callSession] Multi-Output Device not found');
+      }
+    } else if (target === 'speakers') {
+      if (previousAudioOutput && !previousAudioOutput.toLowerCase().includes('multi')) {
+        execSync(`SwitchAudioSource -s "${previousAudioOutput}" -t output`);
+        console.log(`[callSession] Audio output → ${previousAudioOutput}`);
+      } else {
+        // Fallback — ищем динамики
+        const devices = execSync('SwitchAudioSource -a -t output', { encoding: 'utf8' });
+        const speakers = devices.split('\n').find(d =>
+          d.includes('MacBook') || d.includes('Speaker') || d.includes('Динамик')
+        );
+        if (speakers) {
+          execSync(`SwitchAudioSource -s "${speakers.trim()}" -t output`);
+          console.log(`[callSession] Audio output → ${speakers.trim()}`);
+        }
+      }
+      previousAudioOutput = null;
+    }
+  } catch (err) {
+    console.error('[callSession] Audio switch error:', err.message);
   }
 }
 

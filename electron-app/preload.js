@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearContext: () => ipcRenderer.send('clear-context'),
   startCallSession: (metadata) => ipcRenderer.send('start-call-session', metadata),
   stopCallSession: () => ipcRenderer.send('stop-call-session'),
+  getCallSessionStatus: () => ipcRenderer.invoke('get-call-session-status'),
 });
 
 

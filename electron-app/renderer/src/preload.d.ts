@@ -32,8 +32,9 @@ declare global {
       hideSettings: () => void;
       quitApp: () => void;
       clearContext: () => void;
-      startCallSession: (metadata: { title: string; description: string }) => void;
+      startCallSession: (metadata: { title: string; description: string; mode: 'interview' | 'translator' | 'meeting' }) => void;
       stopCallSession: () => void;
+      getCallSessionStatus: () => Promise<boolean>;
     };
 
     overlayBridge?: {

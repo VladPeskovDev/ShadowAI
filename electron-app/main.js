@@ -167,6 +167,11 @@ ipcMain.on('stop-call-session', () => {
   stopCallSession();
 });
 
+ipcMain.handle('get-call-session-status', () => {
+  const { isCallSessionActive } = require('./modules/callSession');
+  return isCallSessionActive();
+});
+
 // Завершение приложения
 ipcMain.on("quit-app", () => {
   BrowserWindow.getAllWindows().forEach((win) => win.destroy());

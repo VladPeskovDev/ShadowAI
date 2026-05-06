@@ -310,8 +310,11 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { optimizeForOcr, whisperLoadModel, whisperTranscribe } = nativeBinding
+const { optimizeForOcr, whisperLoadModel, whisperTranscribe, startSystemAudioCapture, stopSystemAudioCapture, isSystemAudioActive } = nativeBinding
 
 module.exports.optimizeForOcr = optimizeForOcr
 module.exports.whisperLoadModel = whisperLoadModel
 module.exports.whisperTranscribe = whisperTranscribe
+module.exports.startSystemAudioCapture = startSystemAudioCapture
+module.exports.stopSystemAudioCapture = stopSystemAudioCapture
+module.exports.isSystemAudioActive = isSystemAudioActive

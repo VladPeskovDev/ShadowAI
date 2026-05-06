@@ -6,14 +6,14 @@ let isLoaded = false;
 
 /**
  * Путь к модели whisper.
- * В dev — ищем в корне проекта: models/ggml-small.bin
+ * В dev — ищем в корне проекта: models/ggml-medium.bin
  * В production — в ресурсах приложения (asarUnpack)
  */
 function getModelPath() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'models', 'ggml-small.bin');
+    return path.join(process.resourcesPath, 'models', 'ggml-medium.bin');
   }
-  return path.join(__dirname, '..', '..', 'models', 'ggml-small.bin');
+  return path.join(__dirname, '..', '..', 'models', 'ggml-medium.bin');
 }
 
 /**
@@ -26,7 +26,7 @@ function loadWhisperModel() {
 
   if (!fs.existsSync(modelPath)) {
     console.error(`[localWhisper] Model not found: ${modelPath}`);
-    console.error('[localWhisper] Download it: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin');
+    console.error('[localWhisper] Download it: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin');
     return false;
   }
 
