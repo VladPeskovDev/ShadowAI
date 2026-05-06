@@ -1,4 +1,5 @@
 import { useLogStore } from '../store/useLogStore';
+import { t } from '../i18n';
 import styles from './LogPage.module.css';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,9 +9,9 @@ const LogPage = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Логи</h1>
+      <h1 className={styles.heading}>{t('logs.title')}</h1>
       <div className={styles.logBlock}>
-        {logs.length === 0 && <p>Пока нет сообщений</p>}
+        {logs.length === 0 && <p>{t('logs.empty')}</p>}
         {logs.map((log, idx) => (
           <div key={idx} className={`${styles.logEntry} ${styles[log.type] || ''}`}>
             <span>[{log.type.toUpperCase()}]</span> {log.message}
@@ -18,7 +19,7 @@ const LogPage = () => {
         ))}
       </div>
       <button className={styles.button} onClick={() => navigate('/')}>
-        В меню
+        {t('logs.toMenu')}
       </button>
     </div>
   );

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t, toggleLang, getLang } from '../i18n';
 import './HomePage.css';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [sessionActive, setSessionActive] = useState(false);
+  const [lang, setLang] = useState(getLang());
 
   useEffect(() => {
     window.electronAPI.getCallSessionStatus().then(setSessionActive);
@@ -13,6 +15,11 @@ const HomePage = () => {
   const handleStopSession = () => {
     window.electronAPI.stopCallSession();
     setSessionActive(false);
+  };
+
+  const handleToggleLang = () => {
+    const newLang = toggleLang();
+    setLang(newLang);
   };
 
   return (
@@ -25,32 +32,35 @@ const HomePage = () => {
       <div className="home-nav">
         {sessionActive ? (
           <button className="home-btn stop" onClick={handleStopSession}>
-            Завершить сессию
+            {t('home.stopSession')}
           </button>
         ) : (
           <button className="home-btn accent" onClick={() => navigate('/session')}>
-            Начать сессию
+            {t('home.startSession')}
           </button>
         )}
         <button className="home-btn primary" onClick={() => navigate('/settings')}>
-          Настройки
+          {t('home.settings')}
         </button>
         <div className="home-row">
           <button className="home-btn secondary" onClick={() => navigate('/faq')}>
-            FAQ
+            {t('home.faq')}
           </button>
           <button className="home-btn secondary" onClick={() => navigate('/logs')}>
-            Логи
+            {t('home.logs')}
           </button>
         </div>
       </div>
 
       <div className="home-footer">
+        <button className="home-btn ghost" onClick={handleToggleLang}>
+          {lang === 'ru' ? 'EN' : 'RU'}
+        </button>
         <button className="home-btn ghost" onClick={() => navigate('/hide')}>
-          Скрыть
+          {t('home.hide')}
         </button>
         <button className="home-btn ghost danger" onClick={() => navigate('/exit')}>
-          Выход
+          {t('home.exit')}
         </button>
       </div>
     </div>

@@ -111,10 +111,10 @@ const Overlay: React.FC = () => {
       ref={containerRef}
       onClick={() => compact && setCompact(false)}
     >
-      {isStreaming && <div className="streaming-indicator">Генерация...</div>}
+      {isStreaming && <div className="streaming-indicator">Generating...</div>}
 
       {isEmpty ? (
-        <div className="waiting-text">Ожидание...</div>
+        <div className="waiting-text">Waiting...</div>
       ) : (
         <div
           className="response-text"
@@ -135,16 +135,16 @@ const Overlay: React.FC = () => {
             onClick={() => setCurrentIndex(i => Math.max(i - 1, 0))}
             disabled={currentIndex <= 0}
           >
-            Назад
+            Back
           </button>
           <button
             onClick={() => setCurrentIndex(i => Math.min(i + 1, history.length - 1))}
             disabled={currentIndex >= history.length - 1}
           >
-            Вперёд
+            Next
           </button>
           <button onClick={() => setCurrentIndex(history.length - 1)}>
-            Последний
+            Latest
           </button>
         </div>
       )}

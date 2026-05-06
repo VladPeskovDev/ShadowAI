@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '../i18n';
 import styles from './SessionPage.module.css';
 
 type SessionMode = 'interview' | 'translator' | 'meeting';
-
-const modes: { id: SessionMode; label: string; desc: string }[] = [
-  { id: 'interview', label: 'Собеседование', desc: 'Подсказки на вопросы собеседника' },
-  { id: 'translator', label: 'Переводчик', desc: 'Перевод + ответы на RU и EN' },
-  { id: 'meeting', label: 'Встреча', desc: 'Запись и summary созвона' },
-];
 
 const SessionPage = () => {
   const navigate = useNavigate();
@@ -17,8 +12,14 @@ const SessionPage = () => {
   const [mode, setMode] = useState<SessionMode>('interview');
   const [autoVAD, setAutoVAD] = useState(false);
 
+  const modes: { id: SessionMode; label: string; desc: string }[] = [
+    { id: 'interview', label: t('session.interview'), desc: t('session.interviewDesc') },
+    { id: 'translator', label: t('session.translator'), desc: t('session.translatorDesc') },
+    { id: 'meeting', label: t('session.meeting'), desc: t('session.meetingDesc') },
+  ];
+
   const handleStart = () => {
-    const sessionTitle = title.trim() || 'Без названия';
+    const sessionTitle = title.trim() || t('session.untitled');
     window.electronAPI.startCallSession({
       title: sessionTitle,
       description: description.trim(),
@@ -30,10 +31,10 @@ const SessionPage = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Подготовка к сессии</h1>
+      <h1 className={styles.heading}>{t('session.title')}</h1>
 
       <div className={styles.formGroup}>
-        <label className={styles.label}>Режим</label>
+        <label className={styles.label}>{t('session.mode')}</label>
         <div className={styles.modeGroup}>
           {modes.map((m) => (
             <button
@@ -49,21 +50,21 @@ const SessionPage = () => {
       </div>
 
       <div className={styles.formGroup}>
-        <label className={styles.label}>Название</label>
+        <label className={styles.label}>{t('session.name')}</label>
         <input
           type="text"
           className={styles.input}
-          placeholder="Собес Backend Яндекс"
+          placeholder={t('session.namePlaceholder')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label className={styles.label}>Описание (необязательно)</label>
+        <label className={styles.label}>{t('session.description')}</label>
         <textarea
           className={styles.textarea}
-          placeholder="Второй этап, технический..."
+          placeholder={t('session.descPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
@@ -73,16 +74,16 @@ const SessionPage = () => {
       <div className={styles.checkboxGroup} onClick={() => setAutoVAD(!autoVAD)}>
         <div className={`${styles.checkbox} ${autoVAD ? styles.checkboxActive : ''}`} />
         <div>
-          <span className={styles.checkboxLabel}>Авто-подсказки</span>
-          <span className={styles.checkboxDesc}>Автоматически отвечать при паузе собеседника (VAD)</span>
+          <span className={styles.checkboxLabel}>{t('session.autoVAD')}</span>
+          <span className={styles.checkboxDesc}>{t('session.autoVADDesc')}</span>
         </div>
       </div>
 
       <button className={styles.startBtn} onClick={handleStart}>
-        Начать сессию
+        {t('session.start')}
       </button>
       <button className={styles.backBtn} onClick={() => navigate('/')}>
-        Назад
+        {t('session.back')}
       </button>
     </div>
   );

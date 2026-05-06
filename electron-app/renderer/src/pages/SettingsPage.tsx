@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loadSettings, saveSettings, listAudioDevices } from '../ipcBridge';
 import { AppSettings } from '../preload.d';
+import { t } from '../i18n';
 import styles from './SettingsPage.module.css';
 import { clearContext } from '../ipcBridge';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  
+
   const [settings, setSettings] = useState<AppSettings>({
   openaiApiKey: '',
   audioPrompt: '',
@@ -16,7 +17,7 @@ const SettingsPage = () => {
   microphoneIndex: ':0',
   telegramBotToken: '',
   telegramChatId: '',
-  sendScreenshotsToTelegram: false,  
+  sendScreenshotsToTelegram: false,
 });
 
   const [audioDevices, setAudioDevices] = useState<string[]>([]);
@@ -30,19 +31,19 @@ const SettingsPage = () => {
 
   const handleSave = () => {
     if (!settings.openaiApiKey) {
-      alert('❌ OpenAI API ключ обязателен!');
+      alert(t('settings.apiKeyRequired'));
       return;
     }
-    
+
     saveSettings(settings);
-    alert('✅ Настройки сохранены!');
+    alert(t('settings.saved'));
     navigate('/');
   };
 
 
 return (
   <div className={styles.container}>
-    <h1 className={styles.heading}>Настройки</h1>
+    <h1 className={styles.heading}>{t('settings.title')}</h1>
 
     {/* OpenAI API Key */}
     <div className={styles.formGroup}>
@@ -63,37 +64,37 @@ return (
     {/* Audio Prompt */}
     <div className={styles.formGroup}>
       <label className={styles.label}>
-        <strong>Системный промпт для аудио</strong>
+        <strong>{t('settings.audioPrompt')}</strong>
       </label>
       <textarea
         className={styles.textarea}
-        placeholder="Ты полезный ассистент..."
+        placeholder={t('settings.audioPromptPlaceholder')}
         value={settings.audioPrompt}
         onChange={(e) => setSettings({ ...settings, audioPrompt: e.target.value })}
         rows={3}
       />
-      <small className={styles.small}>Этот промпт будет использоваться при обработке голосовых запросов</small>
+      <small className={styles.small}>{t('settings.audioPromptHint')}</small>
     </div>
 
     {/* Screenshot Prompt */}
     <div className={styles.formGroup}>
       <label className={styles.label}>
-        <strong>Системный промпт для скриншотов</strong>
+        <strong>{t('settings.screenshotPrompt')}</strong>
       </label>
       <textarea
         className={styles.textarea}
-        placeholder="Опиши что видишь на скриншоте..."
+        placeholder={t('settings.screenshotPromptPlaceholder')}
         value={settings.screenshotPrompt}
         onChange={(e) => setSettings({ ...settings, screenshotPrompt: e.target.value })}
         rows={3}
       />
-      <small className={styles.small}>Этот промпт будет использоваться при обработке скриншотов</small>
+      <small className={styles.small}>{t('settings.screenshotPromptHint')}</small>
     </div>
 
     {/* Microphone */}
     <div className={styles.formGroup}>
       <label className={styles.label}>
-        <strong>Микрофон</strong>
+        <strong>{t('settings.microphone')}</strong>
       </label>
       <select
         className={styles.select}
@@ -116,7 +117,7 @@ return (
     <div className={styles.formGroup}>
       <div className={styles.switchCard}>
         <div className={styles.switchContent}>
-          <span className={styles.switchTitle}>Включить эффект overlay</span>
+          <span className={styles.switchTitle}>{t('settings.overlayEffect')}</span>
           <label className={styles.switch}>
             <input
               type="checkbox"
@@ -132,7 +133,7 @@ return (
     <hr />
 
     {/* Telegram (optional) */}
-    <h2 className={styles.sectionTitle}>Telegram (опционально)</h2>
+    <h2 className={styles.sectionTitle}>{t('settings.telegram')}</h2>
 
     <div className={styles.formGroup}>
       <label className={styles.label}>
@@ -145,8 +146,6 @@ return (
         value={settings.telegramBotToken || ''}
         onChange={(e) => setSettings({ ...settings, telegramBotToken: e.target.value })}
       />
-      <small className={styles.small}>
-      </small>
     </div>
 
     <div className={styles.formGroup}>
@@ -161,59 +160,53 @@ return (
           onChange={(e) => setSettings({ ...settings, telegramChatId: e.target.value })}
           className={`${styles.input} ${telegramStatus === 'valid' ? styles.valid : telegramStatus === 'invalid' ? styles.invalid : ''}`}
         />
-        
       </div>
     </div>
 
-    {/* Секция контекста диалога */}
-<div className={styles.section}>
-  <h2 className={styles.sectionTitle}>Контекст диалога</h2>
-  <p className={styles.description}>
-    Диалог сохраняется в памяти (последние 10 пар вопрос-ответ).
-    Очистите контекст для начала новой темы разговора.
-  </p>
-  <button 
-    className={styles.clearButton}
-    onClick={() => {
-      clearContext();
-      alert('Контекст диалога очищен!');
-    }}
-  >
-    🔄 Очистить контекст
-  </button>
-</div>
+    {/* Context */}
+    <div className={styles.section}>
+      <h2 className={styles.sectionTitle}>{t('settings.context')}</h2>
+      <p className={styles.description}>{t('settings.contextDesc')}</p>
+      <button
+        className={styles.clearButton}
+        onClick={() => {
+          clearContext();
+          alert(t('settings.contextCleared'));
+        }}
+      >
+        {t('settings.clearContext')}
+      </button>
+    </div>
 
-{/* Интервал периодических скриншотов */}
-<div className={styles.field}>
-  <label htmlFor="screenshotInterval" className={styles.label}>
-    Интервал периодических скриншотов (секунды)
-  </label>
-  <input
-  id="screenshotInterval"
-  type="text"
-  value={settings.screenshotInterval || ''}
-  onChange={(e) => {
-    const value = e.target.value.replace(/\D/g, ''); // Только цифры
-    const num = parseInt(value);
-    if (num > 0) {
-      setSettings({ ...settings, screenshotInterval: num });
-    } else if (value === '') {
-      setSettings({ ...settings, screenshotInterval: undefined });
-    }
-  }}
-  className={styles.input}
-  placeholder="30"
-/>
-  <p className={styles.hint}>
-    Хоткей: Cmd+Shift+P для старт/стоп периодических скриншотов в Telegram
-  </p>
-</div>
+    {/* Screenshot interval */}
+    <div className={styles.field}>
+      <label htmlFor="screenshotInterval" className={styles.label}>
+        {t('settings.screenshotInterval')}
+      </label>
+      <input
+        id="screenshotInterval"
+        type="text"
+        value={settings.screenshotInterval || ''}
+        onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, '');
+          const num = parseInt(value);
+          if (num > 0) {
+            setSettings({ ...settings, screenshotInterval: num });
+          } else if (value === '') {
+            setSettings({ ...settings, screenshotInterval: undefined });
+          }
+        }}
+        className={styles.input}
+        placeholder="30"
+      />
+      <p className={styles.hint}>{t('settings.screenshotIntervalHint')}</p>
+    </div>
 
-    {/* НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ */}
+    {/* Send to Telegram */}
     <div className={styles.formGroup}>
       <div className={styles.switchCard}>
         <div className={styles.switchContent}>
-          <span className={styles.switchTitle}>Отправлять скриншоты в Telegram</span>
+          <span className={styles.switchTitle}>{t('settings.sendToTelegram')}</span>
           <label className={styles.switch}>
             <input
               type="checkbox"
@@ -228,10 +221,10 @@ return (
 
     <div className={styles.buttons}>
       <button className={`${styles.button} ${styles.saveBtn}`} onClick={handleSave}>
-        Сохранить
+        {t('settings.save')}
       </button>
       <button className={styles.button} onClick={() => navigate('/')}>
-        Назад
+        {t('settings.back')}
       </button>
     </div>
   </div>

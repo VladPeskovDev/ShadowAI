@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { t } from '../i18n';
 import styles from './FAQPage.module.css';
 
 const FAQPage = () => {
@@ -6,52 +7,52 @@ const FAQPage = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Горячие клавиши</h1>
+      <h1 className={styles.title}>{t('faq.title')}</h1>
       <div className={styles.textBlock}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Хоткей</th>
-              <th>Действие</th>
+              <th>{t('faq.hotkey')}</th>
+              <th>{t('faq.action')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><kbd>Cmd+Shift+S</kbd></td>
-              <td>Открыть / скрыть настройки</td>
+              <td>{t('faq.openSettings')}</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Shift+D</kbd></td>
-              <td>Показать / скрыть overlay с ответом</td>
+              <td>{t('faq.showOverlay')}</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Shift+C</kbd></td>
-              <td>Call mode — непрерывная фоновая запись (вкл/выкл)</td>
+              <td>{t('faq.callMode')}</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Enter</kbd></td>
-              <td>В call mode: отправить контекст в GPT (whisper не нужен, текст уже готов). Иначе: начать/остановить запись</td>
+              <td>{t('faq.cmdEnter')}</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Left</kbd></td>
-              <td>Скриншот — OCR + отправка в GPT</td>
+              <td>{t('faq.screenshot')}</td>
             </tr>
             <tr>
               <td><kbd>Cmd+Shift+P</kbd></td>
-              <td>Периодические скриншоты в Telegram (вкл/выкл)</td>
+              <td>{t('faq.periodic')}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h2 className={styles.subtitle}>Режимы</h2>
+      <h2 className={styles.subtitle}>{t('faq.modes')}</h2>
       <div className={styles.textBlock}>
-        <p><strong>Обычный режим</strong> — Cmd+Enter для записи, повторно для остановки. Whisper расшифрует, GPT ответит в overlay.</p>
-        <p><strong>Call mode</strong> — запускается через UI (Начать сессию) или Cmd+Shift+C. Непрерывная запись + транскрипция в реальном времени. Cmd+Enter — подсказка мгновенно (текст уже расшифрован). Стенограмма сохраняется в ~/Documents/ShadowAI/.</p>
-        <p><strong>Скриншот</strong> — Cmd+Left делает снимок, OCR распознаёт текст, GPT отвечает. Знает контекст разговора.</p>
+        <p><strong>{t('faq.normalMode')}</strong> — {t('faq.normalModeDesc')}</p>
+        <p><strong>Call mode</strong> — {t('faq.callModeDesc')}</p>
+        <p><strong>{t('faq.screenshotMode')}</strong> — {t('faq.screenshotModeDesc')}</p>
       </div>
 
-      <button className={styles.button} onClick={() => navigate('/')}>В меню</button>
+      <button className={styles.button} onClick={() => navigate('/')}>{t('faq.toMenu')}</button>
     </div>
   );
 };
