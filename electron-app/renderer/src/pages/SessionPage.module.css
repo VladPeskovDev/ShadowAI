@@ -92,6 +92,51 @@
   margin-top: 2px;
 }
 
+.checkboxGroup {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #3a3a50;
+  border-radius: 8px;
+  background: #242438;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkboxGroup:hover {
+  border-color: #505070;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid #3a3a50;
+  border-radius: 4px;
+  margin-top: 1px;
+  transition: all 0.2s ease;
+}
+
+.checkboxActive {
+  background: #007aff;
+  border-color: #007aff;
+}
+
+.checkboxLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f0;
+  display: block;
+}
+
+.checkboxDesc {
+  font-size: 12px;
+  color: #888;
+  display: block;
+  margin-top: 2px;
+}
+
 .startBtn {
   background: #007aff;
   color: #fff;

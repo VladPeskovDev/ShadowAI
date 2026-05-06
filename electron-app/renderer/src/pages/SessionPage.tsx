@@ -15,6 +15,7 @@ const SessionPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState<SessionMode>('interview');
+  const [autoVAD, setAutoVAD] = useState(false);
 
   const handleStart = () => {
     const sessionTitle = title.trim() || 'Без названия';
@@ -22,6 +23,7 @@ const SessionPage = () => {
       title: sessionTitle,
       description: description.trim(),
       mode,
+      autoVAD,
     });
     navigate('/');
   };
@@ -66,6 +68,14 @@ const SessionPage = () => {
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
         />
+      </div>
+
+      <div className={styles.checkboxGroup} onClick={() => setAutoVAD(!autoVAD)}>
+        <div className={`${styles.checkbox} ${autoVAD ? styles.checkboxActive : ''}`} />
+        <div>
+          <span className={styles.checkboxLabel}>Авто-подсказки</span>
+          <span className={styles.checkboxDesc}>Автоматически отвечать при паузе собеседника (VAD)</span>
+        </div>
       </div>
 
       <button className={styles.startBtn} onClick={handleStart}>

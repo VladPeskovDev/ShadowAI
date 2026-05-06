@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "array.prototype.findindex": "^2.2.4",
+    "avr-vad": "^1.0.10",
     "axios": "^1.8.3",
     "call-bind": "^1.0.8",
     "call-bind-apply-helpers": "^1.0.1",

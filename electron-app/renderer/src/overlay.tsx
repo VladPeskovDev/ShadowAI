@@ -4,112 +4,82 @@ import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import './overlay.css';
 
-const INITIAL_SIZE = { width: 900, height: 90 };
+const MIN_HEIGHT = 60;
+const MAX_HEIGHT = 400;
+const WIDTH = 900;
 
-// Парсинг Markdown с подсветкой кода
 const parseMarkdownCode = (input: string): string => {
-  return input.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-    const cleaned = code.trim();
-    const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
-    const highlighted = hljs.highlight(cleaned, { language }).value;
-
-    return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-  }).replace(/\n/g, '<br>');
+  return input
+    .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+      const cleaned = code.trim();
+      const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
+      const highlighted = hljs.highlight(cleaned, { language }).value;
+      return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+    })
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
 };
 
 const Overlay: React.FC = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
-  const [hovered, setHovered] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [fadeClass, setFadeClass] = useState('');
+  const [canScroll, setCanScroll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Получение новых сообщений с поддержкой стриминга
+  // Receive messages
   useEffect(() => {
     const bridge = window.overlayBridge;
-    
-    if (!bridge) {
-      console.error('overlayBridge не найден!');
-      return;
-    }
+    if (!bridge) return;
 
     bridge.onUpdateText((data: { text: string; isStreaming: boolean }) => {
-      //console.log('Получено в overlay:', data);
-      
       const { text, isStreaming: streaming } = data;
-      
+
       setIsStreaming(streaming);
-      
-      if (streaming) {
-        // Во время стриминга обновляем последнее сообщение
-        setHistory(prev => {
-          const newHistory = [...prev];
-          if (newHistory.length === 0) {
-            newHistory.push(text);
-            setCurrentIndex(0);
-          } else {
-            newHistory[newHistory.length - 1] = text;
-          }
-          return newHistory;
-        });
-      } else {
-        // Финальное сообщение - фиксируем в истории
-        setHistory(prev => {
-          const newHistory = [...prev];
-          if (newHistory.length === 0) {
-            newHistory.push(text);
-            setCurrentIndex(0);
-          } else {
-            newHistory[newHistory.length - 1] = text;
-          }
-          return newHistory;
-        });
-      }
+      setCompact(false);
+      setFadeClass('fade-in');
+
+      setHistory(prev => {
+        const newHistory = [...prev];
+        if (newHistory.length === 0) {
+          newHistory.push(text);
+          setCurrentIndex(0);
+        } else {
+          newHistory[newHistory.length - 1] = text;
+        }
+        return newHistory;
+      });
     });
   }, []);
 
-  // Изменение размера окна при наведении
+  // Auto-resize based on content
   useEffect(() => {
     const bridge = window.overlayBridge;
     const el = containerRef.current;
     if (!bridge || !el) return;
 
-    (async () => {
-      const { scrollWidth, scrollHeight } = el;
+    requestAnimationFrame(async () => {
+      const contentHeight = el.scrollHeight;
+      const clampedHeight = Math.min(Math.max(contentHeight + 4, MIN_HEIGHT), compact ? 60 : MAX_HEIGHT);
+      await bridge.resizeOverlay(WIDTH, clampedHeight);
 
-      if (hovered) {
-        await bridge.resizeOverlay(scrollWidth, scrollHeight);
-      } else {
-        await bridge.resizeOverlay(INITIAL_SIZE.width, INITIAL_SIZE.height);
-      }
-    })();
-  }, [hovered]);
+      setCanScroll(el.scrollHeight > el.clientHeight);
+    });
+  }, [history, currentIndex, compact]);
 
-  useEffect(() => {
-    const bridge = window.overlayBridge;
-    if (!bridge) return;
-
-    (async () => {
-      const el = containerRef.current;
-      if (!el) return;
-
-      const { scrollWidth, scrollHeight } = el;
-      await bridge.resizeOverlay(scrollWidth, scrollHeight);
-      
-      // Подсветка кода
-      requestAnimationFrame(() => {
-        document.querySelectorAll('pre code').forEach(block => {
-          hljs.highlightElement(block as HTMLElement);
-        });
-      });
-    })();
-  }, [currentIndex, history]);
-
-  // Автоскролл и подсветка новых блоков
+  // Auto-scroll during streaming
   useEffect(() => {
     const el = containerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && isStreaming) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [history, isStreaming]);
 
+  // Highlight code blocks
+  useEffect(() => {
     requestAnimationFrame(() => {
       document.querySelectorAll('pre code').forEach(block => {
         hljs.highlightElement(block as HTMLElement);
@@ -117,45 +87,64 @@ const Overlay: React.FC = () => {
     });
   }, [history, currentIndex]);
 
+  // Auto-compact after inactivity (collapse after 30s of no streaming)
+  useEffect(() => {
+    if (isStreaming) return;
+
+    const timer = setTimeout(() => {
+      setCompact(true);
+    }, 30000);
+
+    return () => clearTimeout(timer);
+  }, [isStreaming, history]);
+
   const currentText =
     history.length === 0
-      ? '⌛ Ожидание ответа…'
+      ? ''
       : history[Math.max(0, currentIndex)];
+
+  const isEmpty = history.length === 0;
 
   return (
     <div
-      className="overlay-container"
+      className={`overlay-container ${fadeClass} ${compact ? 'compact' : ''}`}
       ref={containerRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onClick={() => compact && setCompact(false)}
     >
-      {isStreaming && <div className="streaming-indicator">⚡ Генерация...</div>}
-      
-      <div
-        key={currentIndex}
-        dangerouslySetInnerHTML={{
-          __html: parseMarkdownCode(currentText),
-        }}
-      />
+      {isStreaming && <div className="streaming-indicator">Генерация...</div>}
 
-      {history.length > 1 && (
+      {isEmpty ? (
+        <div className="waiting-text">Ожидание...</div>
+      ) : (
+        <div
+          className="response-text"
+          key={currentIndex}
+          dangerouslySetInnerHTML={{
+            __html: parseMarkdownCode(currentText),
+          }}
+        />
+      )}
+
+      {canScroll && !isStreaming && (
+        <div className="scroll-indicator">scroll</div>
+      )}
+
+      {history.length > 1 && !compact && (
         <div className="nav-buttons">
           <button
             onClick={() => setCurrentIndex(i => Math.max(i - 1, 0))}
             disabled={currentIndex <= 0}
           >
-            ◀ Назад
+            Назад
           </button>
           <button
-            onClick={() =>
-              setCurrentIndex(i => Math.min(i + 1, history.length - 1))
-            }
+            onClick={() => setCurrentIndex(i => Math.min(i + 1, history.length - 1))}
             disabled={currentIndex >= history.length - 1}
           >
-            ▶ Вперёд
+            Вперёд
           </button>
           <button onClick={() => setCurrentIndex(history.length - 1)}>
-            ⏩ Последний
+            Последний
           </button>
         </div>
       )}

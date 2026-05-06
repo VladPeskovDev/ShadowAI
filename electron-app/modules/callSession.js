@@ -10,6 +10,7 @@ const { addEntry, buildContext } = require('../utils/context');
 const { transcribeLocal, isWhisperAvailable } = require('../utils/localWhisper');
 const { Timer } = require('../utils/timer');
 const { getSessionPrompt } = require('../utils/sessionPrompts');
+const { initVAD, processWavFile, resetVAD } = require('../utils/vad');
 
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
 
@@ -83,11 +84,25 @@ function startCallSession(metadata = {}) {
   isActive = true;
   chunkIndex = 0;
   chunkFiles = [];
+  lastTranscriptions = [];
 
   ipcMain.emit('log-message', null, {
     type: 'info',
     message: `Call session: "${sessionMeta.title}" — запись идёт`,
   });
+
+  // Инициализируем VAD — только если включены авто-подсказки
+  if (metadata.autoVAD) {
+    initVAD(() => {
+      if (isActive && !isProcessing) {
+        ipcMain.emit('log-message', null, {
+          type: 'info',
+          message: '[VAD] Авто-подсказка — собеседник замолчал',
+        });
+        processFromTranscript();
+      }
+    });
+  }
 
   // Переключаем audio output на Multi-Output Device (для BlackHole)
   switchAudioOutput('multi-output');
@@ -136,6 +151,9 @@ function stopCallSession() {
   });
   chunkFiles = [];
 
+  // Сбрасываем VAD
+  resetVAD();
+
   // Возвращаем audio output на динамики
   switchAudioOutput('speakers');
 
@@ -159,6 +177,139 @@ function toggleCallSession() {
 
 function isCallSessionActive() {
   return isActive;
+}
+
+/**
+ * Простой режим: взять последние 3 чанка → whisper → GPT → overlay
+ */
+async function processLastChunksSimple() {
+  if (!isActive) {
+    ipcMain.emit('log-message', null, {
+      type: 'warning',
+      message: 'Call session не запущена',
+    });
+    return;
+  }
+
+  if (isProcessing) {
+    ipcMain.emit('log-message', null, {
+      type: 'warning',
+      message: 'Предыдущий запрос ещё обрабатывается',
+    });
+    return;
+  }
+
+  // Берём готовые чанки (все кроме текущего)
+  const PROCESS_CHUNKS = 3;
+  const readyChunks = chunkFiles.slice(0, -1).slice(-PROCESS_CHUNKS);
+
+  if (readyChunks.length === 0) {
+    ipcMain.emit('log-message', null, {
+      type: 'warning',
+      message: 'Недостаточно записи — подождите несколько секунд',
+    });
+    return;
+  }
+
+  const validChunks = readyChunks.filter(f => {
+    try { return fs.existsSync(f) && fs.statSync(f).size > 0; }
+    catch { return false; }
+  });
+  if (validChunks.length === 0) return;
+
+  isProcessing = true;
+  const timer = new Timer('CALL SESSION (simple)');
+
+  try {
+    // Склеиваем чанки
+    timer.mark('Склейка чанков');
+    const mergedFile = path.join(sessionDir, `merged_${Date.now()}.wav`);
+    await mergeChunks(validChunks, mergedFile);
+
+    if (!fs.existsSync(mergedFile) || fs.statSync(mergedFile).size === 0) {
+      isProcessing = false;
+      timer.end();
+      return;
+    }
+
+    // Whisper
+    timer.mark('Транскрибация');
+    let text = null;
+    if (isWhisperAvailable()) {
+      text = transcribeLocal(mergedFile, 'ru');
+    }
+    try { fs.unlinkSync(mergedFile); } catch {}
+
+    timer.mark('Транскрибация завершена');
+
+    if (!text || text.trim() === '') {
+      ipcMain.emit('log-message', null, {
+        type: 'warning',
+        message: 'Whisper не распознал речь',
+      });
+      isProcessing = false;
+      timer.end();
+      return;
+    }
+
+    ipcMain.emit('log-message', null, {
+      type: 'info',
+      message: `Распознано: "${text.substring(0, 80)}"`,
+    });
+
+    addEntry('me', text);
+    appendToTranscript('me', text);
+
+    // GPT
+    const openai = getOpenAIClient();
+    const modePrompt = sessionMeta ? getSessionPrompt(sessionMeta.mode) : '';
+    const userPrompt = getAudioPrompt() || '';
+    const parts = [modePrompt, userPrompt].filter(Boolean);
+    const prompt = parts.length > 0
+      ? parts.join('\n\nДополнительный контекст от пользователя:\n')
+      : 'Ты полезный ассистент.';
+    const messages = buildContext(prompt);
+
+    timer.mark('Начало стриминга GPT');
+
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages,
+      stream: true,
+    });
+
+    let fullResponse = '';
+    let isFirstChunk = true;
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        if (isFirstChunk) {
+          timer.mark('Первый chunk GPT');
+          isFirstChunk = false;
+        }
+        fullResponse += content;
+        sendOverlayText(fullResponse, true);
+      }
+    }
+
+    timer.mark('Стриминг завершён');
+
+    addEntry('assistant', fullResponse);
+    appendToTranscript('assistant', fullResponse);
+    sendOverlayText(fullResponse, false);
+
+    timer.end();
+  } catch (err) {
+    console.error('[callSession] Simple mode error:', err.message);
+    ipcMain.emit('log-message', null, {
+      type: 'error',
+      message: `Ошибка: ${err.message}`,
+    });
+    timer.end();
+  } finally {
+    isProcessing = false;
+  }
 }
 
 /**
@@ -205,6 +356,7 @@ async function processFromTranscript() {
 
     let fullResponse = '';
     let isFirstChunk = true;
+    let skipCheckDone = false;
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
@@ -213,12 +365,38 @@ async function processFromTranscript() {
           timer.mark('Первый chunk GPT');
           isFirstChunk = false;
         }
+
         fullResponse += content;
+
+        // Буферизируем первые символы для проверки SKIP
+        if (!skipCheckDone) {
+          const trimmed = fullResponse.trim().toUpperCase();
+          // Ещё может быть SKIP — ждём
+          if (trimmed.length < 4 && 'SKIP'.startsWith(trimmed)) {
+            continue;
+          }
+          // Это SKIP
+          if (trimmed === 'SKIP' || trimmed.startsWith('SKIP')) {
+            console.log('[callSession] GPT returned SKIP — no response needed');
+            timer.end();
+            return;
+          }
+          // Не SKIP — показываем накопленное
+          skipCheckDone = true;
+        }
+
         sendOverlayText(fullResponse, true);
       }
     }
 
     timer.mark('Стриминг завершён');
+
+    // Финальная проверка SKIP (если ответ был ровно "SKIP")
+    if (fullResponse.trim().toUpperCase() === 'SKIP') {
+      console.log('[callSession] GPT returned SKIP — no response needed');
+      timer.end();
+      return;
+    }
 
     addEntry('assistant', fullResponse);
     appendToTranscript('assistant', fullResponse);
@@ -235,6 +413,57 @@ async function processFromTranscript() {
   } finally {
     isProcessing = false;
   }
+}
+
+// --- Audio filtering ---
+
+let lastTranscriptions = []; // последние N результатов для детекции повторов
+
+function isAudioSilent(filePath) {
+  try {
+    const data = fs.readFileSync(filePath);
+    if (data.length < 46) return true;
+
+    const pcmData = data.slice(44);
+    let sumSquares = 0;
+    const sampleCount = Math.floor(pcmData.length / 2);
+
+    for (let i = 0; i < pcmData.length - 1; i += 2) {
+      const sample = pcmData.readInt16LE(i) / 32768.0;
+      sumSquares += sample * sample;
+    }
+
+    const rms = Math.sqrt(sumSquares / sampleCount);
+    // RMS < 0.01 = практически тишина
+    return rms < 0.01;
+  } catch {
+    return true;
+  }
+}
+
+function isHallucination(text) {
+  if (!text) return true;
+  const clean = text.trim().toLowerCase();
+
+  // Известные галлюцинации whisper
+  const hallucinations = [
+    'с вами был', 'редактор субтитров', 'субтитры',
+    'подписывайтесь', 'ставьте лайк', 'до новых встреч',
+    'благодарю за внимание', 'спасибо за просмотр',
+  ];
+
+  for (const h of hallucinations) {
+    if (clean.includes(h)) return true;
+  }
+
+  // Детекция повторов — если один и тот же текст 2+ раза подряд
+  lastTranscriptions.push(clean);
+  if (lastTranscriptions.length > 5) lastTranscriptions.shift();
+
+  const duplicates = lastTranscriptions.filter(t => t === clean).length;
+  if (duplicates >= 2) return true;
+
+  return false;
 }
 
 // --- Internal ---
@@ -281,8 +510,8 @@ function startNextChunk() {
 async function transcribeChunk(chunkFile) {
   if (!isActive) return;
   if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
+  if (isAudioSilent(chunkFile)) return;
 
-  // Ждём если другая транскрипция идёт (последовательно, не параллельно)
   while (isTranscribing) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
@@ -296,7 +525,7 @@ async function transcribeChunk(chunkFile) {
       text = transcribeLocal(chunkFile, 'ru');
     }
 
-    if (text && text.trim() !== '') {
+    if (text && text.trim() !== '' && !isHallucination(text)) {
       addEntry('me', text);
       appendToTranscript('me', text);
 
@@ -382,6 +611,7 @@ function startNextSysChunk() {
 async function transcribeSysChunk(chunkFile) {
   if (!isActive) return;
   if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
+  if (isAudioSilent(chunkFile)) return;
 
   while (isTranscribing) {
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -396,7 +626,7 @@ async function transcribeSysChunk(chunkFile) {
       text = transcribeLocal(chunkFile, 'ru');
     }
 
-    if (text && text.trim() !== '') {
+    if (text && text.trim() !== '' && !isHallucination(text)) {
       addEntry('them', text);
       appendToTranscript('them', text);
 
@@ -405,6 +635,9 @@ async function transcribeSysChunk(chunkFile) {
         message: `[SYSTEM/Собеседник] ${text.substring(0, 80)}`,
       });
     }
+
+    // Прогоняем аудио через VAD для детекции пауз
+    await processWavFile(chunkFile);
   } catch (err) {
     console.error('[callSession] Sys transcribe error:', err.message);
   } finally {
@@ -466,6 +699,30 @@ function switchAudioOutput(target) {
   }
 }
 
+function mergeChunks(files, outputPath) {
+  return new Promise((resolve, reject) => {
+    if (files.length === 1) {
+      fs.copyFileSync(files[0], outputPath);
+      return resolve();
+    }
+
+    const listFile = path.join(sessionDir, 'concat_list.txt');
+    const listContent = files.map(f => `file '${f}'`).join('\n');
+    fs.writeFileSync(listFile, listContent);
+
+    const cmd = `"${ffmpegPath}" -f concat -safe 0 -i "${listFile}" -ar 16000 -ac 1 -y "${outputPath}"`;
+
+    exec(cmd, (error) => {
+      try { fs.unlinkSync(listFile); } catch {}
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -479,4 +736,5 @@ module.exports = {
   toggleCallSession,
   isCallSessionActive,
   processFromTranscript,
+  processLastChunksSimple,
 };

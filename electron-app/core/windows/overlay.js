@@ -18,7 +18,7 @@ function createOverlayWindow() {
     y: 60,
     frame: false,
     transparent: true,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     skipTaskbar: true,
     focusable: true,

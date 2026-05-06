@@ -32,7 +32,7 @@ declare global {
       hideSettings: () => void;
       quitApp: () => void;
       clearContext: () => void;
-      startCallSession: (metadata: { title: string; description: string; mode: 'interview' | 'translator' | 'meeting' }) => void;
+      startCallSession: (metadata: { title: string; description: string; mode: 'interview' | 'translator' | 'meeting'; autoVAD: boolean }) => void;
       stopCallSession: () => void;
       getCallSessionStatus: () => Promise<boolean>;
     };
