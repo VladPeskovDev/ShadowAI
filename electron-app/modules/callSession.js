@@ -11,6 +11,8 @@ const { transcribeLocal, isWhisperAvailable } = require('../utils/localWhisper')
 const { Timer } = require('../utils/timer');
 const { getSessionPrompt } = require('../utils/sessionPrompts');
 const { initVAD, processWavFile, resetVAD } = require('../utils/vad');
+const log = require('../utils/logger');
+const { GPT_MODEL, CHUNK_DURATION, MAX_CHUNKS, PROCESS_CHUNKS, SILENCE_RMS_THRESHOLD, BLACKHOLE_DEVICE } = require('../utils/constants');
 
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked');
 
@@ -31,8 +33,7 @@ let sysChunkFiles = [];
 let sessionMeta = null;
 let transcriptFile = null;
 
-const CHUNK_DURATION = 10;
-const MAX_CHUNKS = 12;
+// Constants imported from utils/constants.js
 
 const sessionDir = path.join(os.tmpdir(), 'shadowai-call-session');
 const docsDir = path.join(os.homedir(), 'Documents', 'ShadowAI');
@@ -199,8 +200,6 @@ async function processLastChunksSimple() {
     return;
   }
 
-  // Берём готовые чанки (все кроме текущего)
-  const PROCESS_CHUNKS = 3;
   const readyChunks = chunkFiles.slice(0, -1).slice(-PROCESS_CHUNKS);
 
   if (readyChunks.length === 0) {
@@ -273,7 +272,7 @@ async function processLastChunksSimple() {
     timer.mark('Начало стриминга GPT');
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: GPT_MODEL,
       messages,
       stream: true,
     });
@@ -301,7 +300,7 @@ async function processLastChunksSimple() {
 
     timer.end();
   } catch (err) {
-    console.error('[callSession] Simple mode error:', err.message);
+    log.error('[callSession] Simple mode error:', err.message);
     ipcMain.emit('log-message', null, {
       type: 'error',
       message: `Ошибка: ${err.message}`,
@@ -349,7 +348,7 @@ async function processFromTranscript() {
     timer.mark('Начало стриминга GPT');
 
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: GPT_MODEL,
       messages,
       stream: true,
     });
@@ -377,7 +376,7 @@ async function processFromTranscript() {
           }
           // Это SKIP
           if (trimmed === 'SKIP' || trimmed.startsWith('SKIP')) {
-            console.log('[callSession] GPT returned SKIP — no response needed');
+            log.log('[callSession] GPT returned SKIP — no response needed');
             timer.end();
             return;
           }
@@ -393,7 +392,7 @@ async function processFromTranscript() {
 
     // Финальная проверка SKIP (если ответ был ровно "SKIP")
     if (fullResponse.trim().toUpperCase() === 'SKIP') {
-      console.log('[callSession] GPT returned SKIP — no response needed');
+      log.log('[callSession] GPT returned SKIP — no response needed');
       timer.end();
       return;
     }
@@ -404,7 +403,7 @@ async function processFromTranscript() {
 
     timer.end();
   } catch (err) {
-    console.error('[callSession] Error:', err.message);
+    log.error('[callSession] Error:', err.message);
     ipcMain.emit('log-message', null, {
       type: 'error',
       message: `Ошибка call session: ${err.message}`,
@@ -435,7 +434,7 @@ function isAudioSilent(filePath) {
 
     const rms = Math.sqrt(sumSquares / sampleCount);
     // RMS < 0.01 = практически тишина
-    return rms < 0.01;
+    return rms < SILENCE_RMS_THRESHOLD;
   } catch {
     return true;
   }
@@ -498,7 +497,7 @@ function startNextChunk() {
 
     if (isActive) {
       // Чанк записан — транскрибируем фоново
-      transcribeChunk(chunkFile);
+      transcribeChunkGeneric(chunkFile, 'me');
       startNextChunk();
     }
   });
@@ -507,7 +506,13 @@ function startNextChunk() {
 /**
  * Фоновая транскрипция чанка — результат в transcript + файл
  */
-async function transcribeChunk(chunkFile) {
+/**
+ * Универсальная транскрипция чанка
+ * @param {string} chunkFile — путь к WAV
+ * @param {'me'|'them'} speaker — кто говорил
+ * @param {boolean} runVAD — прогнать через VAD после транскрипции
+ */
+async function transcribeChunkGeneric(chunkFile, speaker, runVAD = false) {
   if (!isActive) return;
   if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
   if (isAudioSilent(chunkFile)) return;
@@ -526,16 +531,21 @@ async function transcribeChunk(chunkFile) {
     }
 
     if (text && text.trim() !== '' && !isHallucination(text)) {
-      addEntry('me', text);
-      appendToTranscript('me', text);
+      addEntry(speaker, text);
+      appendToTranscript(speaker, text);
 
+      const label = speaker === 'me' ? '[MIC/Я]' : '[SYSTEM/Собеседник]';
       ipcMain.emit('log-message', null, {
         type: 'info',
-        message: `[MIC/Я] ${text.substring(0, 80)}`,
+        message: `${label} ${text.substring(0, 80)}`,
       });
     }
+
+    if (runVAD) {
+      await processWavFile(chunkFile);
+    }
   } catch (err) {
-    console.error('[callSession] Transcribe chunk error:', err.message);
+    log.error('[callSession] Transcribe error:', err.message);
   } finally {
     isTranscribing = false;
   }
@@ -558,13 +568,13 @@ function appendToTranscript(speaker, text) {
   try {
     fs.appendFileSync(transcriptFile, line);
   } catch (err) {
-    console.error('[callSession] Write transcript error:', err.message);
+    log.error('[callSession] Write transcript error:', err.message);
   }
 }
 
 // --- System audio recording via BlackHole (ffmpeg) ---
 
-const BLACKHOLE_DEVICE = 'BlackHole 2ch';
+// BLACKHOLE_DEVICE imported from constants
 
 function startNextSysChunk() {
   if (!isActive) return;
@@ -602,48 +612,13 @@ function startNextSysChunk() {
 
     if (isActive) {
       // Транскрибируем чанк system audio
-      transcribeSysChunk(chunkFile);
+      transcribeChunkGeneric(chunkFile, 'them', true);
       startNextSysChunk();
     }
   });
 }
 
-async function transcribeSysChunk(chunkFile) {
-  if (!isActive) return;
-  if (!fs.existsSync(chunkFile) || fs.statSync(chunkFile).size === 0) return;
-  if (isAudioSilent(chunkFile)) return;
-
-  while (isTranscribing) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  isTranscribing = true;
-
-  try {
-    let text = null;
-
-    if (isWhisperAvailable()) {
-      text = transcribeLocal(chunkFile, 'ru');
-    }
-
-    if (text && text.trim() !== '' && !isHallucination(text)) {
-      addEntry('them', text);
-      appendToTranscript('them', text);
-
-      ipcMain.emit('log-message', null, {
-        type: 'info',
-        message: `[SYSTEM/Собеседник] ${text.substring(0, 80)}`,
-      });
-    }
-
-    // Прогоняем аудио через VAD для детекции пауз
-    await processWavFile(chunkFile);
-  } catch (err) {
-    console.error('[callSession] Sys transcribe error:', err.message);
-  } finally {
-    isTranscribing = false;
-  }
-}
+// transcribeSysChunk removed — uses transcribeChunkGeneric('them', true)
 
 // --- Audio output switching ---
 
@@ -656,7 +631,7 @@ function switchAudioOutput(target) {
     // Проверяем есть ли SwitchAudioSource
     execSync('which SwitchAudioSource', { encoding: 'utf8' });
   } catch {
-    console.log('[callSession] SwitchAudioSource not found — install: brew install switchaudio-osx');
+    log.log('[callSession] SwitchAudioSource not found — install: brew install switchaudio-osx');
     return;
   }
 
@@ -673,14 +648,14 @@ function switchAudioOutput(target) {
 
       if (multiOutput) {
         execSync(`SwitchAudioSource -s "${multiOutput.trim()}" -t output`);
-        console.log(`[callSession] Audio output → ${multiOutput.trim()}`);
+        log.log(`[callSession] Audio output → ${multiOutput.trim()}`);
       } else {
-        console.log('[callSession] Multi-Output Device not found');
+        log.log('[callSession] Multi-Output Device not found');
       }
     } else if (target === 'speakers') {
       if (previousAudioOutput && !previousAudioOutput.toLowerCase().includes('multi')) {
         execSync(`SwitchAudioSource -s "${previousAudioOutput}" -t output`);
-        console.log(`[callSession] Audio output → ${previousAudioOutput}`);
+        log.log(`[callSession] Audio output → ${previousAudioOutput}`);
       } else {
         // Fallback — ищем динамики
         const devices = execSync('SwitchAudioSource -a -t output', { encoding: 'utf8' });
@@ -689,13 +664,13 @@ function switchAudioOutput(target) {
         );
         if (speakers) {
           execSync(`SwitchAudioSource -s "${speakers.trim()}" -t output`);
-          console.log(`[callSession] Audio output → ${speakers.trim()}`);
+          log.log(`[callSession] Audio output → ${speakers.trim()}`);
         }
       }
       previousAudioOutput = null;
     }
   } catch (err) {
-    console.error('[callSession] Audio switch error:', err.message);
+    log.error('[callSession] Audio switch error:', err.message);
   }
 }
 

@@ -1,4 +1,5 @@
 const { BrowserWindow } = require('electron');
+const log = require('./logger');
 
 let overlayWindowRef = null;
 let lastText = '⌛ Ожидание ответа...';
@@ -20,7 +21,7 @@ function sendOverlayText(text, isStreaming = true) {
     overlayWindowRef.webContents.send('update-overlay-text', { text, isStreaming });
     //console.log('✅ Отправлено!');
   } else {
-    console.warn('[overlayMessenger] overlayWindowRef is null or destroyed');
+    log.warn('[overlayMessenger] overlayWindowRef is null or destroyed');
   }
 }
 

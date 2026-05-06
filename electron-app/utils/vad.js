@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const log = require('./logger');
+const { VAD_VAD_SILENCE_THRESHOLD_MS, VAD_POSITIVE_THRESHOLD, VAD_NEGATIVE_THRESHOLD, VAD_FRAME_SAMPLES } = require('./constants');
 
 let vad = null;
 let isReady = false;
@@ -7,7 +9,7 @@ let isReady = false;
 // VAD state
 let speechActive = false;
 let silenceStart = 0;
-const SILENCE_THRESHOLD_MS = 1500; // 1.5 сек тишины = триггер
+// Constants imported from constants.js
 
 // Callback when speech ends (silence detected after speech)
 let onSpeechEnd = null;
@@ -23,14 +25,14 @@ async function initVAD(callback) {
     const { RealTimeVAD } = require('avr-vad');
     vad = await RealTimeVAD.new({
       model: 'v5',
-      positiveSpeechThreshold: 0.5,
-      negativeSpeechThreshold: 0.35,
-      frameSamples: 1536,
+      positiveSpeechThreshold: VAD_POSITIVE_THRESHOLD,
+      negativeSpeechThreshold: VAD_NEGATIVE_THRESHOLD,
+      frameSamples: VAD_FRAME_SAMPLES,
     });
     isReady = true;
-    console.log('[VAD] Initialized successfully');
+    log.log('[VAD] Initialized successfully');
   } catch (err) {
-    console.error('[VAD] Init error:', err.message);
+    log.error('[VAD] Init error:', err.message);
     isReady = false;
   }
 }
@@ -55,13 +57,13 @@ async function processAudioFrame(frame) {
         silenceStart = now;
       }
 
-      if (speechActive && silenceStart > 0 && (now - silenceStart) >= SILENCE_THRESHOLD_MS) {
+      if (speechActive && silenceStart > 0 && (now - silenceStart) >= VAD_SILENCE_THRESHOLD_MS) {
         // Тишина 1.5+ сек после речи — триггер
         speechActive = false;
         silenceStart = 0;
 
         if (onSpeechEnd) {
-          console.log('[VAD] Speech ended — triggering auto-response');
+          log.log('[VAD] Speech ended — triggering auto-response');
           onSpeechEnd();
         }
       }
@@ -93,13 +95,13 @@ async function processWavFile(filePath) {
     }
 
     // Разбиваем на фреймы по 1536 samples и прогоняем через VAD
-    const frameSize = 1536;
+    const frameSize = VAD_FRAME_SAMPLES;
     for (let i = 0; i + frameSize <= samples.length; i += frameSize) {
       const frame = samples.slice(i, i + frameSize);
       await processAudioFrame(frame);
     }
   } catch (err) {
-    console.error('[VAD] processWavFile error:', err.message);
+    log.error('[VAD] processWavFile error:', err.message);
   }
 }
 

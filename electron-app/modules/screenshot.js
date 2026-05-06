@@ -9,6 +9,8 @@ const FormData = require('form-data');
 const { Timer } = require('../utils/timer');
 const { optimizeForOcr } = require('../../native');
 const { addEntry, buildContext } = require('../utils/context');
+const log = require('../utils/logger');
+const { GPT_MODEL } = require('../utils/constants');
 
 // Периодические скриншоты
 let periodicInterval = null;
@@ -73,7 +75,7 @@ async function sendScreenshot() {
     const messages = buildContext(systemPrompt);
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: GPT_MODEL,
       messages,
       max_tokens: 1500,
     });
@@ -94,7 +96,7 @@ async function sendScreenshot() {
 
     timer.end();
   } catch (error) {
-    console.error('Ошибка при отправке скриншота:', error.message);
+    log.error('Ошибка при отправке скриншота:', error.message);
 
     ipcMain.emit('log-message', null, {
       type: 'error',
@@ -120,7 +122,7 @@ async function sendToTelegramAsync(buffer, token, chatId, timer) {
 
     timer.mark('Telegram: отправлено');
   } catch (error) {
-    console.error('Ошибка Telegram:', error.message);
+    log.error('Ошибка Telegram:', error.message);
   }
 }
 
@@ -132,7 +134,7 @@ function startPeriodicScreenshots(intervalSeconds) {
 
   periodicIntervalSeconds = intervalSeconds || 20;
 
-  console.log(`Запуск периодических скриншотов каждые ${periodicIntervalSeconds}s`);
+  log.log(`Запуск периодических скриншотов каждые ${periodicIntervalSeconds}s`);
 
   ipcMain.emit('log-message', null, {
     type: 'info',
@@ -143,7 +145,7 @@ function startPeriodicScreenshots(intervalSeconds) {
   const telegramChatId = getTelegramChatId();
 
   if (!telegramToken || !telegramChatId) {
-    console.error('Периодические скриншоты: Telegram не настроен (нет токена или chatId)');
+    log.error('Периодические скриншоты: Telegram не настроен (нет токена или chatId)');
     ipcMain.emit('log-message', null, {
       type: 'error',
       message: 'Периодические скриншоты: настройте Telegram (токен и chatId)',
@@ -160,9 +162,9 @@ function startPeriodicScreenshots(intervalSeconds) {
 
       timer.end();
 
-      console.log('Периодический скриншот отправлен в Telegram');
+      log.log('Периодический скриншот отправлен в Telegram');
     } catch (error) {
-      console.error('Ошибка периодического скриншота:', error.message);
+      log.error('Ошибка периодического скриншота:', error.message);
     }
   }, periodicIntervalSeconds * 1000);
 }

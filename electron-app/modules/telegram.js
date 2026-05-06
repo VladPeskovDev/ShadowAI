@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
+const log = require('../utils/logger');
 
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
@@ -28,7 +29,7 @@ function loadSettings() {
     const data = fs.readFileSync(settingsPath, 'utf-8');
     return { ...defaultSettings, ...JSON.parse(data) };
   } catch (error) {
-    console.error('❌ Ошибка при загрузке настроек:', error);
+    log.error('Ошибка при загрузке настроек:', error);
     return defaultSettings;
   }
 }
@@ -38,7 +39,7 @@ function saveSettings(settings) {
   try {
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
   } catch (error) {
-    console.error('❌ Ошибка при сохранении настроек:', error);
+    log.error('Ошибка при сохранении настроек:', error);
   }
 }
 

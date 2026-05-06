@@ -8,6 +8,8 @@ const { sendOverlayText } = require("../utils/overlayMessenger");
 const { Timer } = require("../utils/timer");
 const { addEntry, buildContext } = require("../utils/context");
 const { transcribeLocal, isWhisperAvailable } = require("../utils/localWhisper");
+const log = require("../utils/logger");
+const { GPT_MODEL, RECORDING_MAX_DURATION } = require("../utils/constants");
 
 const ffmpegPath = require("ffmpeg-static").replace("app.asar", "app.asar.unpacked");
 const tempDir = path.join(os.tmpdir(), "hack-sobes-recordings");
@@ -31,16 +33,16 @@ async function startRecording() {
   let cmd;
 
   if (platform === "darwin") {
-    cmd = `"${ffmpegPath}" -f avfoundation -i "${micIndex}" -t 55 -ar 16000 -ac 1 "${recordingFilePath}"`;
+    cmd = `"${ffmpegPath}" -f avfoundation -i "${micIndex}" -t ${RECORDING_MAX_DURATION} -ar 16000 -ac 1 "${recordingFilePath}"`;
   } else if (platform === "win32") {
-    cmd = `"${ffmpegPath}" -f dshow -i audio="${micIndex}" -t 55 -ar 16000 -ac 1 "${recordingFilePath}"`;
+    cmd = `"${ffmpegPath}" -f dshow -i audio="${micIndex}" -t ${RECORDING_MAX_DURATION} -ar 16000 -ac 1 "${recordingFilePath}"`;
   } else {
-    cmd = `"${ffmpegPath}" -f alsa -i "${micIndex}" -t 55 -ar 16000 -ac 1 "${recordingFilePath}"`;
+    cmd = `"${ffmpegPath}" -f alsa -i "${micIndex}" -t ${RECORDING_MAX_DURATION} -ar 16000 -ac 1 "${recordingFilePath}"`;
   }
 
   recordProcess = exec(cmd, (error, stdout, stderr) => {
     if (error && !error.killed) {
-      console.error("[recorder] Ошибка записи:", error);
+      log.error("[recorder] Ошибка записи:", error);
       ipcMain.emit("log-message", null, {
         type: "error",
         message: `Ошибка записи: ${error.message}`,
@@ -54,7 +56,7 @@ async function startRecording() {
  */
 async function stopRecording() {
   if (!recordProcess) {
-    console.warn("[recorder] Нет активной записи");
+    log.warn("[recorder] Нет активной записи");
     return;
   }
 
@@ -64,7 +66,7 @@ async function stopRecording() {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   if (!fs.existsSync(recordingFilePath) || fs.statSync(recordingFilePath).size === 0) {
-    console.error("[recorder] Файл записи пустой или не создан");
+    log.error("[recorder] Файл записи пустой или не создан");
     ipcMain.emit("log-message", null, {
       type: "error",
       message: "Файл записи пустой",
@@ -77,7 +79,7 @@ async function stopRecording() {
   try {
     fs.unlinkSync(recordingFilePath);
   } catch (err) {
-    console.warn("[recorder] Не удалось удалить временный файл:", err);
+    log.warn("[recorder] Не удалось удалить временный файл:", err);
   }
 }
 
@@ -133,7 +135,7 @@ async function processAudioWithOpenAI(filePath) {
 
     // Шаг 3: Отправка в GPT с контекстом
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: GPT_MODEL,
       messages,
       stream: true,
     });
@@ -194,7 +196,7 @@ async function processAudioWithOpenAI(filePath) {
     return fullResponse;
 
   } catch (err) {
-    console.error("[recorder] processAudioWithOpenAI error:", err);
+    log.error("[recorder] processAudioWithOpenAI error:", err);
 
     ipcMain.emit("log-message", null, {
       type: "error",

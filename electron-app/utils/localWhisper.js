@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const log = require('./logger');
 
 let isLoaded = false;
 
@@ -25,8 +26,8 @@ function loadWhisperModel() {
   const modelPath = getModelPath();
 
   if (!fs.existsSync(modelPath)) {
-    console.error(`[localWhisper] Model not found: ${modelPath}`);
-    console.error('[localWhisper] Download it: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin');
+    log.error(`[localWhisper] Model not found: ${modelPath}`);
+    log.error('[localWhisper] Download it: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin');
     return false;
   }
 
@@ -34,10 +35,10 @@ function loadWhisperModel() {
     const { whisperLoadModel } = require('../../native');
     whisperLoadModel(modelPath);
     isLoaded = true;
-    console.log('[localWhisper] Model loaded successfully');
+    log.log('[localWhisper] Model loaded successfully');
     return true;
   } catch (err) {
-    console.error('[localWhisper] Failed to load model:', err.message);
+    log.error('[localWhisper] Failed to load model:', err.message);
     return false;
   }
 }
@@ -59,7 +60,7 @@ function transcribeLocal(filePath, language = 'ru') {
     const text = whisperTranscribe(filePath, language);
     return text && text.trim() !== '' ? text.trim() : null;
   } catch (err) {
-    console.error('[localWhisper] Transcription error:', err.message);
+    log.error('[localWhisper] Transcription error:', err.message);
     return null;
   }
 }

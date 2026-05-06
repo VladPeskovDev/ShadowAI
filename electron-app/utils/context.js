@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { getOpenAIClient } = require('./openaiClient');
+const log = require('./logger');
+const { GPT_MODEL, CONTEXT_RECENT_MINUTES, CONTEXT_MAX_TOKENS, TOKEN_ESTIMATE_RATIO } = require('./constants');
 
 // --- Transcript storage ---
 let transcript = [];
@@ -23,7 +25,7 @@ setInterval(() => {
   const lines = newEntries.map(JSON.stringify).join('\n') + '\n';
 
   fs.appendFile(backupFile, lines, (err) => {
-    if (err) console.error('[context] Backup error:', err.message);
+    if (err) log.error('[context] Backup error:', err.message);
   });
 
   lastBackupIndex = transcript.length;
@@ -32,7 +34,7 @@ setInterval(() => {
 // Периодический summary каждые 5 мин
 setInterval(() => {
   updateSummary().catch(err => {
-    console.error('[context] Auto-summary error:', err.message);
+    log.error('[context] Auto-summary error:', err.message);
   });
 }, 5 * 60 * 1000);
 
@@ -67,7 +69,7 @@ function getTranscript() {
  * @returns {Array<{role: string, content: string}>}
  */
 function buildContext(systemPrompt, options = {}) {
-  const { recentMinutes = 5, maxTokensEstimate = 4000 } = options;
+  const { recentMinutes = CONTEXT_RECENT_MINUTES, maxTokensEstimate = CONTEXT_MAX_TOKENS } = options;
 
   const messages = [{ role: 'system', content: systemPrompt }];
 
@@ -93,7 +95,7 @@ function buildContext(systemPrompt, options = {}) {
   let contextText = contextParts.join('\n\n');
 
   // Проверяем размер — если слишком большой и нет summary, обрезаем старое
-  const estimatedTokens = Math.ceil(contextText.length / 3.5);
+  const estimatedTokens = Math.ceil(contextText.length / TOKEN_ESTIMATE_RATIO);
   if (estimatedTokens > maxTokensEstimate && old.length > 0 && !cachedSummary) {
     contextText = `## Последние ${recentMinutes} мин диалога:\n${formatTranscript(recent)}`;
   }
@@ -119,7 +121,7 @@ async function updateSummary() {
   try {
     const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: GPT_MODEL,
       messages: [
         {
           role: 'system',
@@ -137,9 +139,9 @@ async function updateSummary() {
 
     cachedSummary = response.choices[0]?.message?.content?.trim() || cachedSummary;
     lastSummaryIndex = old.length;
-    console.log('[context] Summary updated');
+    log.log('[context] Summary updated');
   } catch (err) {
-    console.error('[context] Summary error:', err.message);
+    log.error('[context] Summary error:', err.message);
   }
 }
 
@@ -151,7 +153,7 @@ function clearContext() {
   cachedSummary = '';
   lastSummaryIndex = 0;
   lastBackupIndex = 0;
-  console.log('[context] Контекст очищен');
+  log.log('[context] Контекст очищен');
 }
 
 // --- Helpers ---

@@ -1,4 +1,5 @@
 const { BrowserWindow, screen } = require('electron');
+const log = require('./logger');
 
 function showOverlayEffect(overlayEffectEnabled) {
   try {
@@ -39,7 +40,7 @@ function showOverlayEffect(overlayEffectEnabled) {
       if (!overlayWindow.isDestroyed()) overlayWindow.close();
     }, 100);
   } catch (err) {
-    console.error('❌ Error in showOverlayEffect:', err);
+    log.error('Error in showOverlayEffect:', err);
   }
 }
 

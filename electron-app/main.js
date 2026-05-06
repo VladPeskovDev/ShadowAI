@@ -17,6 +17,7 @@ const { toggleSettingsWindow } = require("./core/windows/settings");
 const { registerShortcuts } = require("./core/shortcuts/registerShortcuts");
 const { loadWhisperModel, isWhisperAvailable } = require("./utils/localWhisper");
 const { startCallSession, stopCallSession } = require("./modules/callSession");
+const log = require("./utils/logger");
 
 let ffmpegPath = require("ffmpeg-static");
 
@@ -36,7 +37,7 @@ app.whenReady().then(() => {
   if (isWhisperAvailable()) {
     loadWhisperModel();
   } else {
-    console.log('[main] Whisper model not found — using API fallback. Download ggml-small.bin to models/');
+    log.log('[main] Whisper model not found — using API fallback. Download ggml-small.bin to models/');
   }
 
   // Регистрируем шорт каты
@@ -94,7 +95,7 @@ ipcMain.on("send-overlay-text", (event, text) => {
   if (overlayWindow) {
     overlayWindow.webContents.send("update-overlay-text", text);
   } else {
-    console.warn("[Main] overlayWindow is null!");
+    log.warn("[Main] overlayWindow is null!");
   }
 });
 
@@ -180,9 +181,9 @@ ipcMain.on("quit-app", () => {
 });
 
 // Обработка логов
-ipcMain.on("log-message", (event, log) => {
+ipcMain.on("log-message", (event, logEntry) => {
   const windows = BrowserWindow.getAllWindows();
-  windows.forEach((win) => win.webContents.send("log-from-main", log));
+  windows.forEach((win) => win.webContents.send("log-from-main", logEntry));
 });
 
 // Скрытие окна настроек

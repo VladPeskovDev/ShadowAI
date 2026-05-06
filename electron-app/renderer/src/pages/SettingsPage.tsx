@@ -21,8 +21,6 @@ const SettingsPage = () => {
 });
 
   const [audioDevices, setAudioDevices] = useState<string[]>([]);
-  const [openAiStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
-  const [telegramStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
   useEffect(() => {
     loadSettings().then(setSettings);
@@ -56,7 +54,7 @@ return (
           placeholder="sk-..."
           value={settings.openaiApiKey}
           onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-          className={`${styles.input} ${openAiStatus === 'valid' ? styles.valid : openAiStatus === 'invalid' ? styles.invalid : ''}`}
+          className={styles.input}
         />
       </div>
     </div>
